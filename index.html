@@ -362,6 +362,7 @@ td.num{text-align:right; font-variant-numeric:tabular-nums; font-weight:700}
 const LIB = {
   incomeCats:  ['资金转账','私人转账','借款','小说收益','档口盈利','买卖酬劳','工资','奖金','兼职','理财收益','红包','其他收入'],
   expenseCats: ['餐饮','交通','购物','孩子','电子烟','香烟','Shopee','拼多多','淘宝','京东','抖音','车贷','水费','电费','TM Unifi','通讯','红事','白事','娱乐','借款','还款','预支','医疗','加油','维修','保险','学杂费','旅游','婴儿用品','SPEED 99','7 ELEVEN','LONGWAN','电器','电子产品','保健品','水族用品','宠物用品'],
+  items:       ['饮料🥤','白咖啡冰☕️','面包🍞','炒饭🍛','鸡饭🍛','粿条汤🍜','云吞面🍜','爪哇面🍜','经济饭🍛','炒粿条🍝','意大利面🍝','韩式饭/面','汉堡🍔','卤肉🧆','零食🍬','冰淇淋🍦','NUGGET🥓','炸鸡🍗','PIZZA🍕','面包🍞','薯条🍟','寿司🍣','华夫饼🧇','Mc DONAL🍟','KFC🍖','LAKSA🍲','NASI LEMAK🍚','蛋糕🍰','文具✏️','衣裤鞋袜👗','内衣裤👙','蔬菜🥬','鸡肉🐔','猪肉🐷','海鲜🐟🦐🦀','零件⚙️','五金件🔩','满煎糕🥐','塔可TACO🌮'],
   members:     ['🙎‍♂️老公','👩我','👧叶诗玲','👧赖芊汐','👦陈俊伟','👩🏻‍🦰俩女儿','母女仨','家婆','妹妹','爸爸','妈妈','叔叔','朋友','其他'],
   locations:   ['28间','二街','长城咖啡店','77咖啡店','百福叻沙','家园咖啡店','中兴咖啡店','国记点心','十全十美美食广场','银火饮食中心','鸿运咖啡店','88咖啡店','大年咖啡店45菜市场','LOTUS','ECONSAVE','ECONO JAYA','HASANI BOOK','ECO','MR DIY','EASY HOME','UTC巴刹','老街场','UTC','MIXUE蜜雪','TAMAN KELADI','TAMAN INTAN','鱼店','其他'],
   payMethods:  ['现金','Tng Ewallet','Ryt Bank','Ryt PayLater','RHB Bank','GX Bank','Boost','Grab Pay','Shopee Pay','支付宝','微信','其他'],
@@ -588,12 +589,13 @@ function V_quick(v){
       </div>
       <div class="field"><label>金额</label><div class="amount-input-wrap"><span class="rm">RM</span><input id="q_amount" inputmode="decimal" placeholder="0.00"></div><div class="pos-hint">POS 机式：直接敲数字</div></div>
       <div class="field"><label>消费分类</label><select id="q_cat"></select></div>
+      <div class="field"><label>物品</label><select id="q_item"><option value="">不选</option>${opt(LIB.items,draft.item)}</select></div>
       <div class="field"><label>备注（手写）</label><input id="q_note" value="${esc(draft.note||'')}" placeholder="可选"></div>
       <div class="field"><label>消费地点</label><select id="q_loc">${opt(LIB.locations,draft.location)}</select></div>
       <div class="field" id="q_partyWrap" style="display:none"><label>往来对象（付款方/借款人）</label>
         <input id="q_party" list="partyList" placeholder="从成员选择或手填"><datalist id="partyList">${LIB.members.map(p=>`<option value="${esc(p)}">`).join('')}${S.parties.map(p=>`<option value="${esc(p.name)}">`).join('')}</datalist>
       </div>
-      <div class="field"><label>单号</label><input id="q_order" value="${esc(draft.orderNo||'')}" placeholder="无单号留空"></div>
+      <div class="field"><label>单号/E-Invoice</label><input id="q_order" value="${esc(draft.orderNo||'')}" placeholder="无单号留空"></div>
       <div class="field"><label>支付方式</label><select id="q_pay">${opt(LIB.payMethods,draft.payMethod)}</select></div>
       <div class="field"><label>交易类型</label><select id="q_tx">${opt(LIB.txTypes,draft.txType)}</select></div>
       <div class="field"><label>🔅成员</label><select id="q_member">${opt(LIB.members,draft.member)}</select></div>
@@ -632,7 +634,7 @@ function V_quick(v){
     const amount=amtInput.getAmount();
     if(!amount||amount<=0){toast('请输入金额');return;}
     const rec={id:uid(),date,type,dir:type==='income'?'in':'out',amount,
-      category:$('#q_cat').value,note:$('#q_note').value.trim(),location:$('#q_loc').value,
+      category:$('#q_cat').value,item:$('#q_item').value,note:$('#q_note').value.trim(),location:$('#q_loc').value,
       party:$('#q_party').value.trim(),orderNo:$('#q_order').value.trim(),
       payMethod:$('#q_pay').value,txType:$('#q_tx').value,member:$('#q_member').value,
       createdAt:Date.now()};
@@ -655,7 +657,7 @@ function V_quick(v){
   };
   $('#q_reset').onclick=()=>{localStorage.removeItem('fw_draft');V_quick(v);};
   // 自动保存草稿
-  ['#q_note','#q_order','#q_party','#q_member','#q_pay','#q_tx','#q_loc'].forEach(sel=>{
+  ['#q_note','#q_order','#q_item','#q_party','#q_member','#q_pay','#q_tx','#q_loc'].forEach(sel=>{
     const el=$(sel); if(!el) return;
     el.addEventListener('change',()=>{
       const cur=JSON.parse(localStorage.getItem('fw_draft')||'{}');
@@ -680,7 +682,7 @@ function V_records(v){
   </div>
   <div class="section-title">📋 流水 <span class="muted" id="r_count" style="font-weight:400;font-size:12px"></span></div>
   <div class="table-wrap glass"><table>
-    <thead><tr><th>日期</th><th>类型</th><th>金额</th><th>分类</th><th>备注</th><th>地点</th><th>单号</th><th>支付</th><th>交易</th><th>成员</th><th>往来</th><th>操作</th></tr></thead>
+    <thead><tr><th>日期</th><th>类型</th><th>金额</th><th>分类</th><th>物品</th><th>备注</th><th>地点</th><th>单号</th><th>支付</th><th>交易</th><th>成员</th><th>往来</th><th>操作</th></tr></thead>
     <tbody id="r_body"></tbody>
   </table></div>`;
   function refresh(){
@@ -698,6 +700,7 @@ function V_records(v){
       <td class="${r.type==='income'?'tag-income':r.type==='expense'?'tag-expense':''}">${r.type==='income'?'收入':r.type==='expense'?'支出':'转账'}</td>
       <td class="num">${fmtRM(r.amount)}</td>
       <td>${esc(r.category||'')}</td>
+      <td>${esc(r.item||'')}</td>
       <td>${esc(r.note||'')}</td>
       <td>${esc(r.location||'')}</td>
       <td>${esc(r.orderNo||'')}</td>
@@ -706,7 +709,7 @@ function V_records(v){
       <td>${esc(r.member||'')}</td>
       <td>${esc(r.party||'')}</td>
       <td><button class="link-btn" data-del="${r.id}">删除</button></td>
-    </tr>`).join(''):'<tr><td colspan="12" class="empty">暂无数据</td></tr>';
+    </tr>`).join(''):'<tr><td colspan="13" class="empty">暂无数据</td></tr>';
     $('#r_count').textContent=`共 ${arr.length} 条`;
     $$('#r_body [data-del]').forEach(b=>b.onclick=async()=>{
       if(!confirm('删除这条？'))return;
@@ -1002,7 +1005,7 @@ function V_calendar(v){
     const body=`<div class="kv"><span class="k">${dmy} 净流</span><span class="v ${tot>=0?'tag-income':'tag-expense'}">${fmtRM(tot)}</span></div>
       <div class="table-wrap" style="margin-top:10px"><table>
       <thead><tr><th>类型</th><th>金额</th><th>分类</th><th>成员</th><th>支付</th><th>备注</th></tr></thead>
-      <tbody>${list.length?list.map(r=>`<tr><td class="${r.dir==='in'?'tag-income':'tag-expense'}">${r.dir==='in'?'收入':'支出'}</td><td class="num">${fmtRM(r.amount)}</td><td>${esc(r.category||'')}</td><td>${esc(r.member||'')}</td><td>${esc(r.payMethod||'')}</td><td>${esc(r.note||'')}${r.party?` · 往来：${esc(r.party)}`:''}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">当日无流水</td></tr>'}</tbody>
+      <tbody>${list.length?list.map(r=>`<tr><td class="${r.dir==='in'?'tag-income':'tag-expense'}">${r.dir==='in'?'收入':'支出'}</td><td class="num">${fmtRM(r.amount)}</td><td>${esc(r.category||'')}</td><td>${esc(r.member||'')}</td><td>${esc(r.payMethod||'')}</td><td>${esc(r.note||'')}${r.item?` · 物品：${esc(r.item)}`:''}${r.party?` · 往来：${esc(r.party)}`:''}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">当日无流水</td></tr>'}</tbody>
       </table></div>`;
     showModal('📅 '+dmy+' 当日明细',body);
   }
@@ -1081,7 +1084,7 @@ function V_data(v){
   $('#ex_xlsx').onclick=()=>{
     if(typeof XLSX==='undefined'){toast('XLSX 未加载');return;}
     const wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(S.records.map(r=>({日期:r.date,类型:r.type,金额:r.amount,分类:r.category,备注:r.note,地点:r.location,单号:r.orderNo,支付方式:r.payMethod,交易类型:r.txType,成员:r.member,往来对象:r.party||''}))),'记账明细');
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(S.records.map(r=>({日期:r.date,类型:r.type,金额:r.amount,分类:r.category,物品:r.item||'',备注:r.note,地点:r.location,单号:r.orderNo,支付方式:r.payMethod,交易类型:r.txType,成员:r.member,往来对象:r.party||''}))),'记账明细');
     XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(S.debts.map(d=>({名称:d.name,总金额:d.totalAmount,已还:d.paidAmount,剩余:debtRemaining(d),每星期:d.weeklyPayment,每月:d.monthlyPayment,起:d.startDate,止:d.endDate,支付:d.payMethod,状态:d.status}))),'债务台账');
     XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(S.accounts.map(a=>({账户:a.name,余额:a.balance}))),'账户余额');
     XLSX.writeFile(wb,'钰琦的记账本-'+todayDMY()+'.xlsx');
@@ -1094,7 +1097,7 @@ function V_data(v){
     if(pwd) doc.setProperties({}); // encryption via options below
     const opt={startY:40,styles:{fontSize:8,cellPadding:3},headStyles:{fillColor:[124,58,237]},alternateRowStyles:{fillColor:[245,243,255]}};
     doc.setFontSize(16); doc.text('家庭收支记账 · '+todayDMY(),40,30);
-    doc.autoTable({...opt,head:[['日期','类型','金额','分类','备注','地点','单号','支付','交易','成员','往来']],body:S.records.map(r=>[r.date,r.type==='income'?'收入':r.type==='expense'?'支出':'转账',fmtRM(r.amount),r.category||'',r.note||'',r.location||'',r.orderNo||'',r.payMethod||'',r.txType||'',r.member||'',r.party||''])});
+    doc.autoTable({...opt,head:[['日期','类型','金额','分类','物品','备注','地点','单号','支付','交易','成员','往来']],body:S.records.map(r=>[r.date,r.type==='income'?'收入':r.type==='expense'?'支出':'转账',fmtRM(r.amount),r.category||'',r.item||'',r.note||'',r.location||'',r.orderNo||'',r.payMethod||'',r.txType||'',r.member||'',r.party||''])});
     if(S.debts.length) doc.autoTable({...opt,head:[['债务','总金额','已还','剩余','每星期','每月','起','止','状态']],body:S.debts.map(d=>[d.name,fmtRM(d.totalAmount),fmtRM(d.paidAmount),fmtRM(debtRemaining(d)),fmtRM(d.weeklyPayment),fmtRM(d.monthlyPayment),d.startDate,d.endDate,d.status])});
     const fname='钰琦的记账本-'+todayDMY()+'.pdf';
     if(pwd) doc.output('save',fname,{userPassword:pwd,ownerPassword:pwd,encryption:{userPassword:pwd,ownerPassword:pwd,masterKey:{length:128},permissions:{printing:'highResolution',modifying:false,copying:false,annotating:false,fillingForms:false,contentAccessibility:false,documentAssembly:false}}}); // 部分浏览器支持

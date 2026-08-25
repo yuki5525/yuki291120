@@ -1,7 +1,7 @@
 /* Service Worker — 家庭记账 PWA
  * 缓存策略：app shell 与 CDN 依赖全部预缓存；同源 / CDN 命中缓存优先，回退网络。
  */
-const CACHE = 'fw-pwa-v6';
+const CACHE = 'fw-pwa-v7';
 const SHELL = [
   './',
   './index.html',
