@@ -1,0 +1,25 @@
+{
+  "name": "钰琦的记账本",
+  "short_name": "钰琦的记账本",
+  "id": "yuqi-ledger",
+  "description": "个人/家庭收支记账、债务台账、预算与日历统计；支持离线 PWA 安装。",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen"],
+  "orientation": "portrait",
+  "background_color": "#0e0d14",
+  "theme_color": "#7c3aed",
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "categories": ["finance", "productivity", "utilities"],
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "快速记账", "url": "./index.html#quick", "description": "记一笔新账目" }
+  ]
+}
