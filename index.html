@@ -12,7 +12,7 @@
   <rect width="512" height="512" rx="96" fill="url(#bg)"/>
   <rect x="40" y="40" width="432" height="432" rx="76" fill="url(#g)" opacity=".22"/>
   <text x="256" y="305" text-anchor="middle" font-size="230" font-family="Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif">💜</text>
-  <text x="256" y="430" text-anchor="middle" font-size="58" font-weight="800" fill="#e9e7f2" font-family="-apple-system,Segoe UI,PingFang SC,Microsoft YaHei,sans-serif" letter-spacing="6">家庭记账</text>
+  <text x="256" y="430" text-anchor="middle" font-size="58" font-weight="800" fill="#e9e7f2" font-family="-apple-system,Segoe UI,PingFang SC,Microsoft YaHei,sans-serif" letter-spacing="6">钰琦的记账本</text>
 </svg>
 
 <!DOCTYPE html>
@@ -23,14 +23,14 @@
 <meta name="theme-color" content="#7c3aed" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="家庭记账" />
+<meta name="apple-mobile-web-app-title" content="钰琦的记账本" />
 <link rel="manifest" href="manifest.json" />
 <link rel="icon" type="image/svg+xml" href="icon.svg" />
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png" />
 <link rel="apple-touch-icon" href="apple-touch-icon.png" sizes="180x180" />
 <link rel="preload" as="image" href="./avatar.png" />
-<title>家庭收支记账工作台 · PWA</title>
+<title>钰琦的记账本 · PWA</title>
 <style>
 :root{
   --bg:#08080b; --bg-2:#0e0d14;
@@ -539,21 +539,6 @@ function V_overview(v){
   const plTotal=S.debts.filter(isPayLater).reduce((a,d)=>a+debtRemaining(d),0);
 
   v.innerHTML=`
-  <div class="warn-banner">
-    <div class="icon">⚠️</div>
-    <div class="text">
-      <strong>网页版 与 PWA安装版 是两套独立 IndexedDB 数据库</strong>，账目不互通。<br/>
-      切换版本请用「导出/导入 → JSON」做迁移。
-    </div>
-  </div>
-  <div class="warn-banner" style="border-color:rgba(255,92,92,.5);background:linear-gradient(90deg, rgba(255,92,92,.12), rgba(255,140,60,.08))">
-    <div class="icon">🛟</div>
-    <div class="text">
-      <strong>清除浏览器网站存储会清空全部账单！</strong><br/>
-      请定期到「导出/导入」备份 JSON；F12 控制台还有「含密码」完整备份脚本（见页面顶部 HTML 注释）。
-    </div>
-  </div>
-
   <div class="section-title">💳 账户余额（第一位）</div>
   <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">
     ${S.accounts.filter(a=>a.name!=='电子钱包').map(a=>`<div class="card glass"><div class="label">${esc(a.name)}</div><div class="value">${fmtRM(a.balance)}</div></div>`).join('')}
@@ -1117,7 +1102,7 @@ function V_data(v){
     XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(S.records.map(r=>({日期:r.date,类型:r.type,金额:r.amount,分类:r.category,备注:r.note,地点:r.location,单号:r.orderNo,支付方式:r.payMethod,交易类型:r.txType,成员:r.member,往来对象:r.party||''}))),'记账明细');
     XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(S.debts.map(d=>({名称:d.name,总金额:d.totalAmount,已还:d.paidAmount,剩余:debtRemaining(d),每星期:d.weeklyPayment,每月:d.monthlyPayment,起:d.startDate,止:d.endDate,支付:d.payMethod,状态:d.status}))),'债务台账');
     XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(S.accounts.map(a=>({账户:a.name,余额:a.balance}))),'账户余额');
-    XLSX.writeFile(wb,'家庭记账-'+todayDMY()+'.xlsx');
+    XLSX.writeFile(wb,'钰琦的记账本-'+todayDMY()+'.xlsx');
   };
   $('#ex_pdf').onclick=()=>{
     if(typeof window.jspdf==='undefined'){toast('jsPDF 未加载');return;}
@@ -1129,14 +1114,14 @@ function V_data(v){
     doc.setFontSize(16); doc.text('家庭收支记账 · '+todayDMY(),40,30);
     doc.autoTable({...opt,head:[['日期','类型','金额','分类','备注','地点','单号','支付','交易','成员','往来']],body:S.records.map(r=>[r.date,r.type==='income'?'收入':r.type==='expense'?'支出':'转账',fmtRM(r.amount),r.category||'',r.note||'',r.location||'',r.orderNo||'',r.payMethod||'',r.txType||'',r.member||'',r.party||''])});
     if(S.debts.length) doc.autoTable({...opt,head:[['债务','总金额','已还','剩余','每星期','每月','起','止','状态']],body:S.debts.map(d=>[d.name,fmtRM(d.totalAmount),fmtRM(d.paidAmount),fmtRM(debtRemaining(d)),fmtRM(d.weeklyPayment),fmtRM(d.monthlyPayment),d.startDate,d.endDate,d.status])});
-    const fname='家庭记账-'+todayDMY()+'.pdf';
+    const fname='钰琦的记账本-'+todayDMY()+'.pdf';
     if(pwd) doc.output('save',fname,{userPassword:pwd,ownerPassword:pwd,encryption:{userPassword:pwd,ownerPassword:pwd,masterKey:{length:128},permissions:{printing:'highResolution',modifying:false,copying:false,annotating:false,fillingForms:false,contentAccessibility:false,documentAssembly:false}}}); // 部分浏览器支持
     else doc.save(fname);
     if(pwd) toast('PDF 已下载（部分浏览器需另用工具加密）');
   };
   $('#ex_json').onclick=()=>{
     const snap={records:S.records,debts:S.debts,accounts:S.accounts,budgets:S.budgets,parties:S.parties,exportedAt:new Date().toISOString()};
-    downloadBlob(new Blob([JSON.stringify(snap,null,2)],{type:'application/json'}),'家庭记账-业务数据-'+todayDMY()+'.json');
+    downloadBlob(new Blob([JSON.stringify(snap,null,2)],{type:'application/json'}),'钰琦的记账本-业务数据-'+todayDMY()+'.json');
   };
   $('#im_json').onchange=async e=>{
     const f=e.target.files[0]; if(!f)return;
@@ -1243,8 +1228,8 @@ boot();
 </html>
 
 {
-  "name": "家庭收支记账工作台",
-  "short_name": "家庭记账",
+  "name": "钰琦的记账本",
+  "short_name": "钰琦的记账本",
   "description": "个人/家庭收支记账、债务台账、预算与日历统计；支持离线 PWA 安装。",
   "start_url": "./index.html",
   "scope": "./",
