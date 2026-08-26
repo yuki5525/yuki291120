@@ -1,7 +1,7 @@
 /* Service Worker — 家庭记账 PWA
  * 缓存策略：app shell 与 CDN 依赖全部预缓存；同源 / CDN 命中缓存优先，回退网络。
  */
-const CACHE = 'fw-pwa-v7';
+const CACHE = 'fw-pwa-v10';
 const SHELL = [
   './',
   './index.html',
@@ -16,7 +16,7 @@ const CDN = [
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js',
   'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
   'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
-  'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js',
+  'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js',
   'https://cdn.jsdelivr.net/npm/tesseract.js@5.0.2/dist/tesseract.min.js',
   'https://cdn.jsdelivr.net/npm/lunar-javascript@1.6.12/lunar.js'
 ];

@@ -127,6 +127,10 @@ textarea{resize:vertical; min-height:60px}
 .badge.gray{background:rgba(150,150,160,.12); color:var(--gray); border-color:rgba(150,150,160,.25)}
 .badge.warn{background:rgba(255,92,92,.14); color:var(--warn); border-color:rgba(255,92,92,.4)}
 .badge.ok{background:rgba(74,222,128,.14); color:var(--ok); border-color:rgba(74,222,128,.4)}
+.filter-tag{display:inline-block; padding:2px 10px; border-radius:999px; font-size:11px; font-weight:600; background:var(--primary-soft); color:#cbb6ff; border:1px solid var(--border-strong); letter-spacing:.3px}
+.kpi-row-head{display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap}
+.kpi-title{font-size:14px; font-weight:700; display:inline-flex; align-items:center; gap:6px; margin:0}
+.kpi-badge{display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:500; background:var(--surface-2); border:1px solid var(--border); color:var(--muted); font-variant-numeric:tabular-nums}
 
 /* ===== 表格 ===== */
 .table-wrap{overflow-x:auto; border-radius:var(--radius); border:1px solid var(--border)}
@@ -166,8 +170,13 @@ td.num{text-align:right; font-variant-numeric:tabular-nums; font-weight:700}
 .lock-card input{text-align:center; font-size:18px; letter-spacing:6px; margin:14px 0}
 
 /* ===== 日历 ===== */
-.cal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:10px; flex-wrap:wrap}
-.cal-nav{display:flex; gap:6px; align-items:center}
+.cal-head{display:flex; align-items:center; justify-content:space-between; margin:14px 0 12px; gap:10px; flex-wrap:wrap}
+.cal-nav{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.cal-nav strong{margin:0 6px; font-size:15px; color:var(--text); letter-spacing:.3px}
+.cal-topbar{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; flex-wrap:wrap}
+.cal-views button{min-width:64px}
+.cal-period-badge{font-size:11.5px; font-weight:400; background:var(--surface-2); border:1px solid var(--border); padding:3px 10px; border-radius:999px; margin-left:8px; color:var(--muted)}
+.cal-stat-kpi{margin-top:6px}
 .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px}
 .cal-cell{border:1px solid var(--border); border-radius:10px; padding:8px 6px; min-height:62px; cursor:pointer; background:rgba(20,18,28,.4); transition:.12s; display:flex; flex-direction:column; justify-content:space-between}
 .cal-cell:hover{border-color:var(--border-strong); background:rgba(124,58,237,.1)}
@@ -344,7 +353,7 @@ td.num{text-align:right; font-variant-numeric:tabular-nums; font-weight:700}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.2/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.6.12/lunar.js"></script>
 
@@ -362,8 +371,8 @@ td.num{text-align:right; font-variant-numeric:tabular-nums; font-weight:700}
 const LIB = {
   incomeCats:  ['资金转账','私人转账','借款','小说收益','档口盈利','买卖酬劳','工资','奖金','兼职','理财收益','红包','其他收入'],
   expenseCats: ['餐饮','交通','购物','孩子','电子烟','香烟','Shopee','拼多多','淘宝','京东','抖音','车贷','水费','电费','TM Unifi','通讯','红事','白事','娱乐','借款','还款','预支','医疗','加油','维修','保险','学杂费','旅游','婴儿用品','SPEED 99','7 ELEVEN','LONGWAN','电器','电子产品','保健品','水族用品','宠物用品'],
-  items:       ['饮料🥤','白咖啡冰☕️','面包🍞','炒饭🍛','鸡饭🍛','粿条汤🍜','云吞面🍜','爪哇面🍜','经济饭🍛','炒粿条🍝','意大利面🍝','韩式饭/面','汉堡🍔','卤肉🧆','零食🍬','冰淇淋🍦','NUGGET🥓','炸鸡🍗','PIZZA🍕','面包🍞','薯条🍟','寿司🍣','华夫饼🧇','Mc DONAL🍟','KFC🍖','LAKSA🍲','NASI LEMAK🍚','蛋糕🍰','文具✏️','衣裤鞋袜👗','内衣裤👙','蔬菜🥬','鸡肉🐔','猪肉🐷','海鲜🐟🦐🦀','零件⚙️','五金件🔩','满煎糕🥐','塔可TACO🌮'],
-  members:     ['🙎‍♂️老公','👩我','👧叶诗玲','👧赖芊汐','👦陈俊伟','👩🏻‍🦰俩女儿','母女仨','家婆','妹妹','爸爸','妈妈','叔叔','朋友','其他'],
+  items:       ['饮料🥤','白咖啡冰☕️','面包🍞','炒饭🍛','鸡饭🍛','粿条汤🍜','云吞面🍜','爪哇面🍜','经济饭🍛','炒粿条🍝','意大利面🍝','韩式饭/面','汉堡🍔','卤肉🧆','零食🍬','冰淇淋🍦','NUGGET🥓','炸鸡🍗','PIZZA🍕','面包🍞','薯条🍟','寿司🍣','华夫饼🧇','Mc DONAL🍟','KFC🍖','LAKSA🍲','NASI LEMAK🍚','蛋糕🍰','文具✏️','衣裤鞋袜👗','内衣裤👙','蔬菜🥬','鸡肉🐔','猪肉🐷','海鲜🐟🦐🦀','零件⚙️','五金件🔩','满煎糕🥐','塔可TACO🌮','生计用品🔞','糕点🥐','炸糕🥐','卫生棉💧','卫生纸🧻'],
+  members:     ['👩我','🙎‍♂️老公','👧Queency','👧Gabby','👦Ambrose','👩🏻‍🦰俩女儿','👩‍👧‍👦母女仨','家婆','妹妹','爸爸','妈妈','叔叔','朋友','其他'],
   locations:   ['28间','二街','长城咖啡店','77咖啡店','百福叻沙','家园咖啡店','中兴咖啡店','国记点心','十全十美美食广场','银火饮食中心','鸿运咖啡店','88咖啡店','大年咖啡店45菜市场','LOTUS','ECONSAVE','ECONO JAYA','HASANI BOOK','ECO','MR DIY','EASY HOME','UTC巴刹','老街场','UTC','MIXUE蜜雪','TAMAN KELADI','TAMAN INTAN','鱼店','其他'],
   payMethods:  ['现金','Tng Ewallet','Ryt Bank','Ryt PayLater','RHB Bank','GX Bank','Boost','Grab Pay','Shopee Pay','支付宝','微信','其他'],
   txTypes:     ['CASH','DEBIT CARD','DUITNOW TRANSFER','QR SCAN TRANSFER'],
@@ -373,6 +382,19 @@ const LIB = {
 /* ---------- 工具 ---------- */
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const presetLabel=p=>({today:'今天',yesterday:'昨天','7d':'近7天',month:'本月',all:'全部',custom:'自定义'})[p]||p;
+/* 读取「当前筛选」helper:V_data 导出按钮共用 */
+function _currentFilterArr(){
+  const cur=JSON.parse(localStorage.getItem('fw_records_filter')||'{}');
+  const scope=document.getElementById('ex_scope')?document.getElementById('ex_scope').value:'all';
+  if(scope!=='filter') return S.records.slice();
+  let arr=S.records.slice();
+  const start=cur.start||'01-01-1970', end=cur.end||'31-12-2999';
+  arr=inRange(arr,start,end);
+  if(cur.type) arr=arr.filter(r=>r.type===cur.type);
+  if(cur.kw){ const k=cur.kw.toLowerCase(); arr=arr.filter(r=>Object.values(r).some(v=>String(v).toLowerCase().includes(k))); }
+  return arr;
+}
 
 /* 日期：统一 DD-MM-YYYY；dmyKey 用于区间比较（跨年正确） */
 function pad2(n){return String(n).padStart(2,'0');}
@@ -409,7 +431,7 @@ function toast(m){const t=document.createElement('div');t.className='toast';t.te
 function downloadBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1500);}
 
 /* ---------- IndexedDB ---------- */
-const DB_NAME='fwDB', DB_VER=1;
+const DB_NAME='fwDB', DB_VER=2;
 let _db=null;
 function openDB(){
   if(_db) return Promise.resolve(_db);
@@ -420,6 +442,8 @@ function openDB(){
       for(const s of ['records','debts','accounts','budgets','parties']){
         if(!db.objectStoreNames.contains(s)) db.createObjectStore(s,{keyPath:'id'});
       }
+      // v2 新增:小票图片(按 recordId 索引;一张图片对应一条流水)
+      if(!db.objectStoreNames.contains('receipts')) db.createObjectStore('receipts',{keyPath:'recordId'});
     };
     req.onsuccess=()=>{_db=req.result;res(_db);};
     req.onerror=()=>rej(req.error);
@@ -549,13 +573,17 @@ function V_overview(v){
 
 /* ---------- POS 金额输入 ---------- */
 function bindAmountInput(input){
-  let raw='';
+  // 用户输入什么就是什么(650 → 650;520000 → 520000;63000 → 63000)
+  // 仅做展示格式化:整数不显示 .00,有小数才最多显示 2 位;不做 ÷100 / ÷1000 任何缩放。
   const fmt=()=>{
-    if(raw==='') input.value='';
-    else { const n=parseInt(raw,10)/100; input.value=n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+    let s=String(raw);
+    if(s===''){input.value='';return;}
+    if(!s.includes('.')){input.value=s;return;}
+    const [a,b]=s.split('.');
+    input.value=a+'.'+(b||'').slice(0,2);
   };
-  // 把输入框里已显示的数字同步回 raw（点击/聚焦或首次按键时调用），避免“金额点了消失”
-  const sync=()=>{ const d=(input.value||'').replace(/[^0-9.]/g,'').replace(/\./g,''); if(d!=='') raw=d; };
+  let raw='';
+  const sync=()=>{ const d=(input.value||'').replace(/[^0-9.]/g,''); raw=d; };
   input.readOnly=false;
   input.addEventListener('focus',()=>{ sync(); input.select(); });
   input.addEventListener('keydown',(e)=>{
@@ -569,8 +597,8 @@ function bindAmountInput(input){
   });
   input.addEventListener('blur',()=>{ if(!raw) input.value=''; else fmt(); });
   input.dataset.pos='1';
-  input.getAmount=()=>{ if(!raw) return 0; return parseInt(raw,10)/100; };
-  input.setAmount=(n)=>{ if(!n){raw='';fmt();return;} const s=Math.round(Number(n)*100).toString(); raw=s; fmt(); };
+  input.getAmount=()=>{ const n=parseFloat(raw); return isNaN(n)?0:n; };
+  input.setAmount=(n)=>{ if(!n){raw='';fmt();return;} const s=String(n); raw=s.indexOf('.')>=0?s.replace(/0+$/,'').replace(/\.$/,''):s; fmt(); };
 }
 
 /* ---------- 视图：快速记账 ---------- */
@@ -579,7 +607,7 @@ function V_quick(v){
   v.innerHTML=`
   <div class="warn-banner" style="margin-bottom:14px">
     <div class="icon">💡</div>
-    <div class="text">POS 金额输入：直接敲数字，末两位自动为角分（例：1234→RM 12.34；100→RM 100.00），也支持手动输小数点。</div>
+    <div class="text">金额输入:用户输入什么就是什么(整数不显示 .00,有小数最多 2 位)。例:敲 650 → RM 650;敲 12.5 → RM 12.5。</div>
   </div>
   <div class="card glass">
     <div class="form-grid">
@@ -587,7 +615,17 @@ function V_quick(v){
       <div class="field"><label>收支类型</label>
         <select id="q_type"><option value="income">收入</option><option value="expense" ${draft.type==='expense'?'selected':''}>支出</option></select>
       </div>
-      <div class="field"><label>金额</label><div class="amount-input-wrap"><span class="rm">RM</span><input id="q_amount" inputmode="decimal" placeholder="0.00"></div><div class="pos-hint">POS 机式：直接敲数字</div></div>
+      <div class="field"><label>金额</label><div class="amount-input-wrap"><span class="rm">RM</span><input id="q_amount" inputmode="decimal" placeholder="0"></div><div class="pos-hint">整数不显示 .00,有小数最多 2 位</div></div>
+      <div class="field" id="q_ocrWrap" style="grid-column:1/-1">
+        <label style="display:flex;align-items:center;gap:8px">
+          <span>📷 拍照/扫描小票 OCR</span>
+          <button type="button" class="ghost-btn" id="q_cam">📷 拍照</button>
+          <button type="button" class="ghost-btn" id="q_up">🖼️ 上传图片</button>
+          <input type="file" id="q_file" accept="image/*" capture="environment" hidden>
+        </label>
+        <div id="q_preview" style="margin-top:8px;display:none"><img id="q_img" style="max-width:100%;max-height:220px;border-radius:8px;border:1px solid var(--border)"></div>
+        <div id="q_ocrStatus" class="tiny muted" style="margin-top:6px;display:none"></div>
+      </div>
       <div class="field"><label>消费分类</label><select id="q_cat"></select></div>
       <div class="field"><label>物品</label><select id="q_item"><option value="">不选</option>${opt(LIB.items,draft.item)}</select></div>
       <div class="field"><label>备注（手写）</label><input id="q_note" value="${esc(draft.note||'')}" placeholder="可选"></div>
@@ -614,6 +652,70 @@ function V_quick(v){
   $('#q_date').value=draft.date||todayDMY();
   amtInput.setAmount(draft.amount||0);
 
+  // ===== 拍照/上传图片 → OCR 填充 =====
+  // 只把图片 Blob 暂存在 _pendingPhoto, 用户点「保存」时才写入 IndexedDB;
+  // 不上传服务器,全部本地浏览器处理(Tesseract.js WASM 在本地跑).
+  let _pendingPhoto=null;
+  const ocrStatus=(m,on)=>{ const el=$('#q_ocrStatus'); if(!el) return; el.style.display=on?'block':'none'; el.textContent=m; };
+  const showPreview=(blob)=>{
+    if(!blob) return;
+    _pendingPhoto=blob;
+    const url=URL.createObjectURL(blob);
+    const img=$('#q_img'); $('#q_preview').style.display='block';
+    if(img.src) URL.revokeObjectURL(img.src);
+    img.src=url;
+  };
+  const pickFile=(captureMode)=>{
+    const f=$('#q_file');
+    f.removeAttribute('capture'); // 上传:不带 capture → 走相册/文件
+    if(captureMode==='camera') f.setAttribute('capture','environment');
+    f.click();
+  };
+  $('#q_cam').onclick=()=>pickFile('camera');
+  $('#q_up').onclick=()=>pickFile('file');
+  $('#q_file').onchange=async e=>{
+    const f=e.target.files&&e.target.files[0]; if(!f) return;
+    if(!/^image\//.test(f.type)){ toast('请选择图片文件'); return; }
+    showPreview(f);
+    ocrStatus('🔍 OCR 识别中(本地处理,不联网)...',true);
+    try{
+      if(typeof Tesseract==='undefined'){
+        ocrStatus('⚠️ Tesseract 未加载,只保留图片,字段不填充',true);
+        return;
+      }
+      const r=await Tesseract.recognize(f,'eng',{logger:m=>{ if(m.status==='recognizing text') ocrStatus(`🔍 识别中 ${Math.round((m.progress||0)*100)}%`,true); }});
+      fillFromOCR(r.data.text||'');
+      ocrStatus('✅ 识别完成,请人工核对后保存',true);
+    }catch(err){
+      console.error(err);
+      ocrStatus('⚠️ OCR 失败: '+(err&&err.message||err),true);
+    }finally{
+      e.target.value='';
+    }
+  };
+  function fillFromOCR(text){
+    if(!text) return;
+    // 金额:抓最后一个「数字 + .数字」,或在 RM/RM/MYR 后
+    const m=text.match(/(?:rm|myr|total|amount|grand\s*total)[^\d]{0,12}(\d{1,5}(?:\.\d{1,2})?)/i);
+    let amt=null;
+    if(m) amt=m[1];
+    if(!amt){ const all=text.match(/\d{1,5}\.\d{2}/g)||[]; amt=all.length?all[all.length-1]:null; }
+    if(amt) amtInput.setAmount(parseFloat(amt));
+    // 日期:DD/MM/YYYY 或 DD-MM-YYYY 或 YYYY-MM-DD
+    const dm=text.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
+    if(dm){
+      let d=dm[1].padStart(2,'0'),mo=dm[2].padStart(2,'0'),y=dm[3];
+      if(y.length===2) y='20'+y;
+      $('#q_date').value=`${d}-${mo}-${y}`;
+    }else{
+      const iso=text.match(/(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/);
+      if(iso){ $('#q_date').value=`${iso[3].padStart(2,'0')}-${iso[2].padStart(2,'0')}-${iso[1]}`; }
+    }
+    // 备注:取 OCR第一行非数字行
+    const firstLine=(text.split(/\r?\n/).find(l=>l.trim()&&!/^\d/.test(l.trim()))||'').trim().slice(0,60);
+    if(firstLine && !$('#q_note').value) $('#q_note').value=firstLine;
+  }
+
   function refreshCat(){
     const type=$('#q_type').value;
     const cats=type==='income'?LIB.incomeCats:LIB.expenseCats;
@@ -639,8 +741,14 @@ function V_quick(v){
       payMethod:$('#q_pay').value,txType:$('#q_tx').value,member:$('#q_member').value,
       createdAt:Date.now()};
     S.records.push(rec); await dbPut('records',rec);
+    // 保存小票图片到 IndexedDB(本地浏览器存储,不上传服务器)
+    if(_pendingPhoto){
+      try{
+        await dbPut('receipts',{recordId:rec.id, blob:_pendingPhoto, type:_pendingPhoto.type||'image/jpeg', createdAt:Date.now()});
+      }catch(e){ console.warn('保存小票失败',e); }
+    }
 
-    // 关联债务：自动扣本金
+    // 关联债务:自动扣本金
     const did=$('#q_debt').value;
     if(did){
       const d=S.debts.find(x=>x.id===did);
@@ -654,8 +762,12 @@ function V_quick(v){
     localStorage.removeItem('fw_draft');
     toast('已保存 '+fmtRM(amount));
     amtInput.setAmount(0); $('#q_note').value=''; $('#q_order').value=''; $('#q_party').value=''; $('#q_debt').value='';
+    _pendingPhoto=null; const img=$('#q_img'); if(img&&img.src) URL.revokeObjectURL(img.src); $('#q_preview').style.display='none'; ocrStatus('',false);
   };
-  $('#q_reset').onclick=()=>{localStorage.removeItem('fw_draft');V_quick(v);};
+  $('#q_reset').onclick=()=>{
+    _pendingPhoto=null; const img=$('#q_img'); if(img&&img.src) URL.revokeObjectURL(img.src);
+    localStorage.removeItem('fw_draft');V_quick(v);
+  };
   // 自动保存草稿
   ['#q_note','#q_order','#q_item','#q_party','#q_member','#q_pay','#q_tx','#q_loc'].forEach(sel=>{
     const el=$(sel); if(!el) return;
@@ -670,19 +782,63 @@ function V_quick(v){
 /* ---------- 视图：记账明细 ---------- */
 function V_records(v){
   const draft=JSON.parse(localStorage.getItem('fw_records_filter')||'{}');
+  const today=todayDMY();
+  const wk=weekRangeOf(today);
+  const mo=monthRangeDMY(new Date().getFullYear(),new Date().getMonth()+1);
+  const yrNow=new Date().getFullYear();
+  const yrRange={start:'01-01-'+yrNow,end:'31-12-'+yrNow};
+  const kpis=[
+    ['今日收支',today,today,`📅 ${today}`],
+    ['本周收支',wk.start,wk.end,`📆 ${wk.start.slice(0,5)} - ${wk.end.slice(0,5)} · 星期一 起`],
+    ['本月收支',mo.start,mo.end,`📊 ${mo.start.slice(0,7)}`],
+    ['全年收支汇总',yrRange.start,yrRange.end,`📅 ${yrNow}`],
+  ].map(([label,s,e,bad])=>{
+    const rs=inRange(flowRecords(),s,e);
+    const i=rs.filter(r=>r.dir==='in').reduce((a,r)=>a+r.amount,0);
+    const ex=rs.filter(r=>r.dir==='out').reduce((a,r)=>a+r.amount,0);
+    return {label,bad,i,ex,bal:i-ex};
+  });
   v.innerHTML=`
   <div class="card glass">
-    <div class="form-grid">
-      <div class="field"><label>开始日期</label><input id="r_start" placeholder="DD-MM-YYYY" value="${esc(draft.start||'')}"></div>
-      <div class="field"><label>结束日期</label><input id="r_end" placeholder="DD-MM-YYYY" value="${esc(draft.end||'')}"></div>
+    <div class="section-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span>🔍 筛选 & 导出</span>
+      <span class="filter-tag">${draft.preset==='custom'?'自定义':(draft.preset||'全部记录')}</span>
+    </div>
+    <p class="tiny muted" style="margin:4px 0 12px">💡 调整下方筛选条件后，明细表 + 概览/统计页的 KPI 与图表会全部按新范围重算。导出范围可选「当前筛选」或「全部记录」。</p>
+    <div class="seg" id="r_preset">
+      <button data-p="today">今天</button>
+      <button data-p="yesterday">昨天</button>
+      <button data-p="7d">近7天</button>
+      <button data-p="month">本月</button>
+      <button data-p="all" class="active">全部</button>
+      <button data-p="custom">自定义:</button>
+    </div>
+    <div class="form-grid" style="margin-top:10px">
+      <div class="field"><label>年/月/日</label><input id="r_start" placeholder="DD-MM-YYYY" value="${esc(draft.start||'')}"></div>
+      <div class="field"><label>至</label></div>
+      <div class="field"><label>年/月/日</label><input id="r_end" placeholder="DD-MM-YYYY" value="${esc(draft.end||'')}"></div>
       <div class="field"><label>类型</label><select id="r_type"><option value="">全部</option><option value="income">收入</option><option value="expense">支出</option><option value="transfer">转账</option></select></div>
       <div class="field"><label>关键字</label><input id="r_kw" placeholder="分类/备注/成员" value="${esc(draft.kw||'')}"></div>
     </div>
     <div class="row" style="margin-top:12px"><button class="primary-btn" id="r_q">查询</button><button class="ghost-btn" id="r_c">清空</button></div>
   </div>
+  <div class="section-title">📅 KPI 速览</div>
+  ${kpis.map(k=>`
+    <div class="card glass" style="margin-bottom:10px">
+      <div class="kpi-row-head">
+        <span class="kpi-title">${k.label}</span>
+        ${k.bad?`<span class="kpi-badge">${k.bad}</span>`:''}
+      </div>
+      <div class="cards">
+        <div class="card glass"><div class="label">收入</div><div class="value income">${fmtRM(k.i)}</div></div>
+        <div class="card glass"><div class="label">支出</div><div class="value expense">${fmtRM(k.ex)}</div></div>
+        <div class="card glass"><div class="label">实时结余</div><div class="value ${k.bal>=0?'':'warn'}">${fmtRM(k.bal)}</div></div>
+      </div>
+    </div>
+  `).join('')}
   <div class="section-title">📋 流水 <span class="muted" id="r_count" style="font-weight:400;font-size:12px"></span></div>
   <div class="table-wrap glass"><table>
-    <thead><tr><th>日期</th><th>类型</th><th>金额</th><th>分类</th><th>物品</th><th>备注</th><th>地点</th><th>单号</th><th>支付</th><th>交易</th><th>成员</th><th>往来</th><th>操作</th></tr></thead>
+    <thead><tr><th>日期</th><th>类型</th><th>金额</th><th>分类</th><th>物品</th><th>备注</th><th>地点</th><th>单号</th><th>支付</th><th>交易</th><th>成员</th><th>往来</th><th>小票</th><th>操作</th></tr></thead>
     <tbody id="r_body"></tbody>
   </table></div>`;
   function refresh(){
@@ -708,18 +864,62 @@ function V_records(v){
       <td>${esc(r.txType||'')}</td>
       <td>${esc(r.member||'')}</td>
       <td>${esc(r.party||'')}</td>
+      <td><button class="link-btn" data-receipt="${r.id}">📷</button></td>
       <td><button class="link-btn" data-del="${r.id}">删除</button></td>
-    </tr>`).join(''):'<tr><td colspan="13" class="empty">暂无数据</td></tr>';
+    </tr>`).join(''):'<tr><td colspan="14" class="empty">暂无数据</td></tr>';
     $('#r_count').textContent=`共 ${arr.length} 条`;
+    $$('#r_body [data-receipt]').forEach(b=>b.onclick=async()=>{
+      const id=b.dataset.receipt;
+      const rec=S.records.find(r=>r.id===id);
+      try{
+        const db=await openDB();
+        const blob=await new Promise(res=>{const t=db.transaction('receipts','readonly').objectStore('receipts').get(id);t.onsuccess=()=>res(t.result&&t.result.blob);t.onerror=()=>res(null);});
+        if(!blob){ toast('这条没有小票照片'); return; }
+        const url=URL.createObjectURL(blob);
+        const body=`<div style="text-align:center"><img src="${url}" style="max-width:100%;max-height:70vh;border-radius:8px"></div><p class="tiny muted" style="margin-top:8px">流水:${rec?esc(rec.date+' / '+rec.category+' / '+fmtRM(rec.amount)):''}</p>`;
+        showModal('📷 小票 - '+id.slice(0,8), body);
+      }catch(e){ toast('读取小票失败'); }
+    });
     $$('#r_body [data-del]').forEach(b=>b.onclick=async()=>{
-      if(!confirm('删除这条？'))return;
+      if(!confirm('删除这条?(若有小票照片会一起删除)'))return;
       const id=b.dataset.del; S.records=S.records.filter(r=>r.id!==id);
-      await dbDel('records',id); refresh();
+      await dbDel('records',id);
+      try{ await dbDel('receipts',id); }catch(e){} // 同步删小票,释放 IndexedDB 空间
+      refresh();
     });
   }
-  $('#r_q').onclick=()=>{localStorage.setItem('fw_records_filter',JSON.stringify({start:$('#r_start').value,end:$('#r_end').value,kw:$('#r_kw').value,type:$('#r_type').value}));refresh();};
+  $('#r_q').onclick=()=>{
+    const cur={start:$('#r_start').value,end:$('#r_end').value,kw:$('#r_kw').value,type:$('#r_type').value,preset:currentPreset};
+    localStorage.setItem('fw_records_filter',JSON.stringify(cur));refresh();
+  };
   $('#r_c').onclick=()=>{localStorage.removeItem('fw_records_filter');V_records(v);};
   if(draft.type) $('#r_type').value=draft.type;
+
+  // —— 快捷筛选预设 ——
+  let currentPreset=draft.preset||'all';
+  const presetMap={
+    today:()=>{const t=todayDMY();return {start:t,end:t};},
+    yesterday:()=>{const y=dmyAddDays(todayDMY(),-1);return {start:y,end:y};},
+    '7d':()=>{const t=todayDMY();return {start:dmyAddDays(t,-6),end:t};},
+    month:()=>{const d=new Date();const mo=monthRangeDMY(d.getFullYear(),d.getMonth()+1);return mo;},
+    all:()=>({start:'01-01-1970',end:'31-12-2999'}),
+    custom:()=>({start:$('#r_start').value||'01-01-1970',end:$('#r_end').value||'31-12-2999'}),
+  };
+  const presetLabel={today:'今天',yesterday:'昨天','7d':'近7天',month:'本月',all:'全部',custom:'自定义'};
+  $$('#r_preset button').forEach(b=>b.onclick=()=>{
+    $$('#r_preset button').forEach(x=>x.classList.toggle('active',x===b));
+    currentPreset=b.dataset.p;
+    if(currentPreset!=='custom'){
+      const r=presetMap[currentPreset]();
+      $('#r_start').value=r.start; $('#r_end').value=r.end;
+    }
+    const cur={start:$('#r_start').value,end:$('#r_end').value,kw:$('#r_kw').value,type:$('#r_type').value,preset:currentPreset};
+    localStorage.setItem('fw_records_filter',JSON.stringify(cur));
+    refresh();
+  });
+  // 还原 preset active 状态
+  $$('#r_preset button').forEach(x=>x.classList.toggle('active',x.dataset.p===currentPreset));
+
   refresh();
 }
 
@@ -856,6 +1056,23 @@ function V_stats(v){
   const catEntries=Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
   const mMap=Array(12).fill(0).map(()=>({i:0,e:0})); yr.forEach(r=>{const m=parseInt(String(r.date).split('-')[1],10);if(m>=1&&m<=12){mMap[m-1][r.dir==='in'?'i':'e']+=r.amount;}});
 
+  // —— KPI 速览:今日 / 本周 / 本月 / 全年 ——
+  const today=todayDMY();
+  const wk=weekRangeOf(today);
+  const mo=monthRangeDMY(new Date().getFullYear(),new Date().getMonth()+1);
+  const yrRange={start:'01-01-'+year,end:'31-12-'+year};
+  const kpis=[
+    ['今日收支',today,today,`📅 ${today}`],
+    ['本周收支',wk.start,wk.end,`📆 ${wk.start.slice(0,5)} - ${wk.end.slice(0,5)} · 星期一 起`],
+    ['本月收支',mo.start,mo.end,`📊 ${mo.start.slice(0,7)}`],
+    ['全年收支汇总',yrRange.start,yrRange.end,`📅 ${year}`],
+  ].map(([label,s,e,badge])=>{
+    const rs=inRange(flowRecords(),s,e);
+    const i=rs.filter(r=>r.dir==='in').reduce((a,r)=>a+r.amount,0);
+    const ex=rs.filter(r=>r.dir==='out').reduce((a,r)=>a+r.amount,0);
+    return {label,badge,i,ex,bal:i-ex};
+  });
+
   // 支付方式现金流卡片
   const groups={现金:{i:0,e:0},银行:{i:0,e:0},'小资贷款':{i:0,e:0},电子钱包:{i:0,e:0}};
   flowRecords().forEach(r=>{
@@ -885,6 +1102,21 @@ function V_stats(v){
     }).join('')}
   </div>
   <p class="tiny muted" style="margin:4px 2px 16px">说明：💵 现金 = 支付方式「现金」；🏦 银行 = 「RHB Bank」；📑 小资贷款 = PayLater 债务剩余待还本金（不与流水净流相加）；📱 电子钱包 = 其余全部支付方式逐项计入。</p>
+
+  <div class="section-title">📈 KPI 速览（今日 / 本周 / 本月 / 全年）</div>
+  ${kpis.map(k=>`
+    <div class="card glass" style="margin-bottom:10px">
+      <div class="kpi-row-head">
+        <span class="kpi-title">${k.label}</span>
+        ${k.badge?`<span class="kpi-badge">${k.badge}</span>`:''}
+      </div>
+      <div class="cards">
+        <div class="card glass"><div class="label">收入</div><div class="value income">${fmtRM(k.i)}</div></div>
+        <div class="card glass"><div class="label">支出</div><div class="value expense">${fmtRM(k.ex)}</div></div>
+        <div class="card glass"><div class="label">实时结余</div><div class="value ${k.bal>=0?'':'warn'}">${fmtRM(k.bal)}</div></div>
+      </div>
+    </div>
+  `).join('')}
 
   <div class="section-title">📊 消费分类占比</div>
   <div class="card glass chart-box"><canvas id="pie"></canvas></div>
@@ -976,17 +1208,23 @@ function V_calendar(v){
   const cur=window._calCur||{y:new Date().getFullYear(),m:new Date().getMonth()+1};
   window._calCur=cur;
   v.innerHTML=`
+  <div class="card glass">
+    <div class="cal-topbar">
+      <div class="section-title" style="margin:0;font-size:15px">📅 日历收支统计 <span class="cal-period-badge" id="cal_period_badge">${cur.y} 年 ${cur.m} 月</span></div>
+      <div class="seg cal-views" id="calView">
+        <button data-v="day">日</button>
+        <button data-v="month" class="active">月视图</button>
+        <button data-v="year">年视图</button>
+      </div>
+    </div>
+    <div id="cal_stat_kpi" class="cal-stat-kpi"></div>
+  </div>
   <div class="cal-head">
     <div class="cal-nav">
-      <button class="ghost-btn" id="c_prev">‹</button>
+      <button class="ghost-btn" id="c_prev">‹ 上月</button>
       <strong id="c_title">${cur.y} 年 ${cur.m} 月</strong>
-      <button class="ghost-btn" id="c_next">›</button>
+      <button class="ghost-btn" id="c_next">下月 ›</button>
       <button class="ghost-btn" id="c_today">今天</button>
-    </div>
-    <div class="seg" id="calView">
-      <button data-v="day">日</button>
-      <button data-v="month" class="active">月</button>
-      <button data-v="year">年</button>
     </div>
   </div>
   <div id="cal_body"></div>`;
@@ -1011,6 +1249,27 @@ function V_calendar(v){
   }
   function render(){
     const recs=flowRecords();
+    // —— 日历收支统计(根据视图范围) ——
+    let statRange,statLabel;
+    if(view==='year'){
+      statRange={start:'01-01-'+cur.y,end:'31-12-'+cur.y};
+      statLabel=cur.y+' 年';
+    }else{
+      statRange=monthRangeDMY(cur.y,cur.m);
+      statLabel=cur.y+' 年 '+cur.m+' 月';
+    }
+    const rs=inRange(recs,statRange.start,statRange.end);
+    const sInc=rs.filter(r=>r.dir==='in').reduce((a,r)=>a+r.amount,0);
+    const sExp=rs.filter(r=>r.dir==='out').reduce((a,r)=>a+r.amount,0);
+    const sBal=sInc-sExp;
+    if($('#cal_period_badge')) $('#cal_period_badge').textContent=statLabel;
+    $('#cal_stat_kpi').innerHTML=`
+      <div class="cards">
+        <div class="card glass"><div class="label">收入</div><div class="value income">${fmtRM(sInc)}</div></div>
+        <div class="card glass"><div class="label">支出</div><div class="value expense">${fmtRM(sExp)}</div></div>
+        <div class="card glass"><div class="label">结余</div><div class="value ${sBal>=0?'':'warn'}">${fmtRM(sBal)}</div></div>
+      </div>`;
+    $('#c_title').textContent=cur.y+' 年 '+cur.m+' 月';
     if(view==='month'){
       const first=new Date(cur.y,cur.m-1,1).getDay();
       const days=new Date(cur.y,cur.m,0).getDate();
@@ -1040,6 +1299,10 @@ function V_calendar(v){
       }).join('')}</div>`;
       $$('#cal_body .cal-month').forEach(el=>el.onclick=()=>{cur.m=+el.dataset.m;view='month';$$('#calView button').forEach(x=>x.classList.toggle('active',x.dataset.v==='month'));render();});
       $('#c_title').textContent=cur.y+' 年';
+    } else if(view==='day'){
+      // 日视图（点击某天弹窗）
+      $('#cal_body').innerHTML=`<div class="empty">点击上方"日"按钮可查看当日明细弹窗</div>`;
+      $('#c_title').textContent=todayDMY();
     }
   }
   render();
@@ -1065,16 +1328,27 @@ function V_parties(v){
 
 /* ---------- 视图：导出/导入 ---------- */
 function V_data(v){
+  const curFilter=JSON.parse(localStorage.getItem('fw_records_filter')||'{}');
+  const filterDesc=curFilter.preset&&curFilter.preset!=='all'?(presetLabel(curFilter.preset)+' '+(curFilter.start||'')+'~'+(curFilter.end||'')):'全部记录';
   v.innerHTML=`
   <div class="warn-banner"><div class="icon">🛟</div><div class="text"><strong>定期导出 JSON 备份！</strong> 清除浏览器网站存储会清空全部账单；F12 控制台还有「含密码」完整备份脚本（见页面顶部 HTML 注释）。</div></div>
   <div class="card glass">
     <div class="section-title">💾 导出</div>
+    <div class="form-grid" style="margin-bottom:10px">
+      <div class="field">
+        <label>导出范围</label>
+        <select id="ex_scope">
+          <option value="all">全部记录</option>
+            <option value="filter" selected>当前筛选（${esc(filterDesc)}）</option>
+        </select>
+      </div>
+    </div>
     <div class="pill-row">
       <button class="primary-btn" id="ex_xlsx">导出 Excel (.xlsx)</button>
-      <button class="primary-btn" id="ex_pdf">导出 PDF（带密码）</button>
+      <button class="primary-btn" id="ex_pdf">导出 PDF</button>
       <button class="ghost-btn" id="ex_json">导出 JSON（业务数据）</button>
     </div>
-    <p class="tiny muted" style="margin-top:8px">PDF 可选填密码；JSON 仅含业务流水，不含登录密码（密码备份请用控制台脚本）。</p>
+    <p class="tiny muted" style="margin-top:8px">PDF 由 html2canvas+jsPDF 生成(中文不乱码)；JSON 仅含业务流水，不含登录密码(密码备份请用控制台脚本)；小票图片不导出,仅在浏览器 IndexedDB 内绑定。</p>
   </div>
   <div class="card glass" style="margin-top:14px">
     <div class="section-title">📥 导入</div>
@@ -1084,33 +1358,118 @@ function V_data(v){
   $('#ex_xlsx').onclick=()=>{
     if(typeof XLSX==='undefined'){toast('XLSX 未加载');return;}
     const wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(S.records.map(r=>({日期:r.date,类型:r.type,金额:r.amount,分类:r.category,物品:r.item||'',备注:r.note,地点:r.location,单号:r.orderNo,支付方式:r.payMethod,交易类型:r.txType,成员:r.member,往来对象:r.party||''}))),'记账明细');
+    const rows=_currentFilterArr();
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.map(r=>({日期:r.date,类型:r.type,金额:r.amount,分类:r.category,物品:r.item||'',备注:r.note,地点:r.location,单号:r.orderNo,支付方式:r.payMethod,交易类型:r.txType,成员:r.member,往来对象:r.party||''}))),'记账明细');
     XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(S.debts.map(d=>({名称:d.name,总金额:d.totalAmount,已还:d.paidAmount,剩余:debtRemaining(d),每星期:d.weeklyPayment,每月:d.monthlyPayment,起:d.startDate,止:d.endDate,支付:d.payMethod,状态:d.status}))),'债务台账');
     XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(S.accounts.map(a=>({账户:a.name,余额:a.balance}))),'账户余额');
     XLSX.writeFile(wb,'钰琦的记账本-'+todayDMY()+'.xlsx');
+    toast(`已导出 ${rows.length} 条`);
   };
-  $('#ex_pdf').onclick=()=>{
-    if(typeof window.jspdf==='undefined'){toast('jsPDF 未加载');return;}
-    const pwd=prompt('为 PDF 设置打开密码（留空=不加密）：','');
-    const {jsPDF}=window.jspdf;
-    const doc=new jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
-    if(pwd) doc.setProperties({}); // encryption via options below
-    const opt={startY:40,styles:{fontSize:8,cellPadding:3},headStyles:{fillColor:[124,58,237]},alternateRowStyles:{fillColor:[245,243,255]}};
-    doc.setFontSize(16); doc.text('家庭收支记账 · '+todayDMY(),40,30);
-    doc.autoTable({...opt,head:[['日期','类型','金额','分类','物品','备注','地点','单号','支付','交易','成员','往来']],body:S.records.map(r=>[r.date,r.type==='income'?'收入':r.type==='expense'?'支出':'转账',fmtRM(r.amount),r.category||'',r.item||'',r.note||'',r.location||'',r.orderNo||'',r.payMethod||'',r.txType||'',r.member||'',r.party||''])});
-    if(S.debts.length) doc.autoTable({...opt,head:[['债务','总金额','已还','剩余','每星期','每月','起','止','状态']],body:S.debts.map(d=>[d.name,fmtRM(d.totalAmount),fmtRM(d.paidAmount),fmtRM(debtRemaining(d)),fmtRM(d.weeklyPayment),fmtRM(d.monthlyPayment),d.startDate,d.endDate,d.status])});
-    const fname='钰琦的记账本-'+todayDMY()+'.pdf';
-    if(pwd) doc.output('save',fname,{userPassword:pwd,ownerPassword:pwd,encryption:{userPassword:pwd,ownerPassword:pwd,masterKey:{length:128},permissions:{printing:'highResolution',modifying:false,copying:false,annotating:false,fillingForms:false,contentAccessibility:false,documentAssembly:false}}}); // 部分浏览器支持
-    else doc.save(fname);
-    if(pwd) toast('PDF 已下载（部分浏览器需另用工具加密）');
+  $('#ex_pdf').onclick=async()=>{
+    if(!window.html2canvas){ toast('PDF 模块未就绪，请稍后再试'); return; }
+    if(!window.jspdf||!window.jspdf.jsPDF){ toast('jsPDF 未就绪'); return; }
+    const date=todayDMY();
+    const rows=_currentFilterArr().slice().sort((a,b)=>dmyKey(b.date).localeCompare(dmyKey(a.date))||(b.createdAt-a.createdAt));
+    const recRows=rows.map(r=>`<tr>
+      <td>${esc(r.date)}</td>
+      <td>${r.type==='income'?'收入':r.type==='expense'?'支出':'转账'}</td>
+      <td class="num">${fmtRM(r.amount)}</td>
+      <td>${esc(r.category||'')}</td>
+      <td>${esc(r.item||'')}</td>
+      <td>${esc(r.note||'')}</td>
+      <td>${esc(r.location||'')}</td>
+      <td>${esc(r.orderNo||'')}</td>
+      <td>${esc(r.payMethod||'')}</td>
+      <td>${esc(r.txType||'')}</td>
+      <td>${esc(r.member||'')}</td>
+      <td>${esc(r.party||'')}</td>
+    </tr>`).join('');
+    const debtRows=S.debts.map(d=>`<tr>
+      <td>${esc(d.name)}</td>
+      <td class="num">${fmtRM(d.totalAmount)}</td>
+      <td class="num">${fmtRM(d.paidAmount)}</td>
+      <td class="num">${fmtRM(debtRemaining(d))}</td>
+      <td class="num">${fmtRM(d.weeklyPayment)}</td>
+      <td class="num">${fmtRM(d.monthlyPayment)}</td>
+      <td>${esc(d.startDate||'')}</td>
+      <td>${esc(d.endDate||'')}</td>
+      <td>${esc(d.status||'')}</td>
+    </tr>`).join('');
+    // 在屏外构建一个固定宽度的 HTML 报告容器（用真实浏览器字体管线渲染 → 中文必正常）
+    const box=document.createElement('div');
+    box.style.cssText='position:fixed;left:-10000px;top:0;width:1120px;background:#fff;color:#1a1a1a;padding:18px 20px;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Hiragino Sans GB",sans-serif;font-size:12px;line-height:1.5;box-sizing:border-box';
+    box.innerHTML=`
+      <h1 style="font-size:19px;margin:0 0 4px;font-weight:700">钰琦的记账本</h1>
+      <div style="color:#666;margin-bottom:14px">导出日期 ${date} · 共 ${rows.length} 条流水</div>
+      <table style="border-collapse:collapse;width:100%;margin-bottom:14px;font-size:11px">
+        <thead><tr style="background:#7c3aed;color:#fff">
+          <th style="border:1px solid #c9c4d6;padding:5px 6px;text-align:left">日期</th>
+          <th style="border:1px solid #c9c4d6;padding:5px 6px;text-align:left">类型</th>
+          <th style="border:1px solid #c9c4d6;padding:5px 6px;text-align:right">金额</th>
+          <th style="border:1px solid #c9c4d6;padding:5px 6px;text-align:left">分类</th>
+          <th style="border:1px solid #c9c4d6;padding:5px 6px;text-align:left">物品</th>
+          <th style="border:1px solid #c9c4d6;padding:5px 6px;text-align:left">备注</th>
+          <th style="border:1px solid #c9c4d6;padding:5px 6px;text-align:left">地点</th>
+          <th style="border:1px solid #c9c4d6;padding:5px 6px;text-align:left">单号</th>
+          <th style="border:1px solid #c9c4d6;padding:5px 6px;text-align:left">支付</th>
+          <th style="border:1px solid #c9c4d6;padding:5px 6px;text-align:left">交易</th>
+          <th style="border:1px solid #c9c4d6;padding:5px 6px;text-align:left">成员</th>
+          <th style="border:1px solid #c9c4d6;padding:5px 6px;text-align:left">往来</th>
+        </tr></thead>
+        <tbody>${recRows||'<tr><td colspan="12" style="border:1px solid #c9c4d6;padding:6px;text-align:center">暂无数据</td></tr>'}</tbody>
+      </table>
+      ${S.debts.length?`<h2 style="font-size:14px;margin:18px 0 6px;font-weight:700">债务台账</h2>
+      <table style="border-collapse:collapse;width:100%;margin-bottom:14px;font-size:11px">
+        <thead><tr style="background:#7c3aed;color:#fff">
+          <th style="border:1px solid #c9c4d6;padding:5px 6px;text-align:left">债务</th>
+          <th style="border:1px solid #c9c4d6;padding:5px 6px;text-align:right">总金额</th>
+          <th style="border:1px solid #c9c4d6;padding:5px 6px;text-align:right">已还</th>
+          <th style="border:1px solid #c9c4d6;padding:5px 6px;text-align:right">剩余</th>
+          <th style="border:1px solid #c9c4d6;padding:5px 6px;text-align:right">每星期</th>
+          <th style="border:1px solid #c9c4d6;padding:5px 6px;text-align:right">每月</th>
+          <th style="border:1px solid #c9c4d6;padding:5px 6px;text-align:left">起</th>
+          <th style="border:1px solid #c9c4d6;padding:5px 6px;text-align:left">止</th>
+          <th style="border:1px solid #c9c4d6;padding:5px 6px;text-align:left">状态</th>
+        </tr></thead>
+        <tbody>${debtRows}</tbody>
+      </table>`:''}`;
+    document.body.appendChild(box);
+    toast('正在生成 PDF…');
+    try{
+      const canvas=await window.html2canvas(box,{scale:2,backgroundColor:'#ffffff',useCORS:true,logging:false});
+      document.body.removeChild(box);
+      const {jsPDF}=window.jspdf;
+      const pdf=new jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
+      const pdfW=pdf.internal.pageSize.getWidth();
+      const pdfH=pdf.internal.pageSize.getHeight();
+      const margin=20;
+      const contentW=pdfW-margin*2;
+      const contentH=pdfH-margin*2;
+      const totalImgH=canvas.height*(contentW/canvas.width);
+      const imgData=canvas.toDataURL('image/jpeg',0.95);
+      const pages=Math.max(1,Math.ceil(totalImgH/contentH));
+      for(let i=0;i<pages;i++){
+        if(i>0) pdf.addPage();
+        // 在每页上画同一张完整图，y 偏移 = margin - i*contentH
+        pdf.addImage(imgData,'JPEG',margin,margin-i*contentH,contentW,totalImgH);
+      }
+      pdf.save('钰琦的记账本-'+date+'.pdf');
+      toast('PDF 已保存');
+    }catch(e){
+      try{ document.body.removeChild(box); }catch(_){}
+      console.error(e);
+      toast('PDF 生成失败：'+(e&&e.message||e));
+    }
   };
   $('#ex_json').onclick=()=>{
-    const snap={records:S.records,debts:S.debts,accounts:S.accounts,budgets:S.budgets,parties:S.parties,exportedAt:new Date().toISOString()};
+    const rows=_currentFilterArr();
+    const snap={records:rows,debts:S.debts,accounts:S.accounts,budgets:S.budgets,parties:S.parties,exportedAt:new Date().toISOString(),scope:document.getElementById('ex_scope')?document.getElementById('ex_scope').value:'all',note:'小票图片未导出(仅存于浏览器 IndexedDB)'};
     downloadBlob(new Blob([JSON.stringify(snap,null,2)],{type:'application/json'}),'钰琦的记账本-业务数据-'+todayDMY()+'.json');
+    toast(`已导出 ${rows.length} 条`);
   };
   $('#im_json').onchange=async e=>{
     const f=e.target.files[0]; if(!f)return;
-    if(!confirm('将覆盖当前业务数据，确定导入？'))return;
+    if(!confirm('将覆盖当前业务数据,确定导入?(原有小票照片会一起清掉,因为 JSON 不含图片二进制)'))return;
     const data=JSON.parse(await f.text());
     for(const s of ['records','debts','accounts','budgets','parties']){
       if(!data[s]) continue;
@@ -1118,7 +1477,9 @@ function V_data(v){
       for(const r of data[s]) os.put(r);
       await new Promise(r=>{tx.oncomplete=r;});
     }
-    await loadAll(); alert('导入完成，页面将刷新'); location.reload();
+    // 导入时同步清掉 receipts(新记录 id 未必匹配旧小票 recordId)
+    try{ const db=await openDB(); const tx=db.transaction('receipts','readwrite'); tx.objectStore('receipts').clear(); await new Promise(r=>{tx.oncomplete=r;}); }catch(e){}
+    await loadAll(); alert('导入完成,页面将刷新'); location.reload();
   };
 }
 
@@ -1155,7 +1516,7 @@ function V_settings(v){
   };
   $('#s_wipe').onclick=async()=>{
     if(!confirm('确定清空全部业务数据？此操作不可恢复！'))return;
-    for(const s of ['records','debts','accounts','budgets','parties']){
+    for(const s of ['records','debts','accounts','budgets','parties','receipts']){
       const db=await openDB(); const tx=db.transaction(s,'readwrite'); tx.objectStore(s).clear(); await new Promise(r=>tx.oncomplete=r);
     }
     await loadAll(); alert('已清空'); go('overview');
