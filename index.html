@@ -843,7 +843,9 @@ function V_records(v){
     <div class="section-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <span>🔍 筛选 & 导出</span>
       <span class="filter-tag">${draft.preset==='custom'?'自定义':(draft.preset||'全部记录')}</span>
+      <button class="ghost-btn btn-sm" id="r_toggle" style="margin-left:auto">${localStorage.getItem('fw_records_collapsed')==='1'?'展开 ▾':'收起 ▴'}</button>
     </div>
+    <div id="r_panel" style="${localStorage.getItem('fw_records_collapsed')==='1'?'display:none':''}">
     <p class="tiny muted" style="margin:4px 0 12px">💡 调整下方筛选条件后，明细表 + 概览/统计页的 KPI 与图表会全部按新范围重算。导出范围可选「当前筛选」或「全部记录」。</p>
     <div class="seg" id="r_preset">
       <button data-p="today">今天</button>
@@ -861,6 +863,7 @@ function V_records(v){
       <div class="field"><label>关键字</label><input id="r_kw" placeholder="分类/备注/成员" value="${esc(draft.kw||'')}"></div>
     </div>
     <div class="row" style="margin-top:12px"><button class="primary-btn" id="r_q">查询</button><button class="ghost-btn" id="r_c">清空</button></div>
+    </div>
   </div>
   <div class="section-title">📅 KPI 速览</div>
   ${kpis.map(k=>`
@@ -959,6 +962,17 @@ function V_records(v){
   });
   // 还原 preset active 状态
   $$('#r_preset button').forEach(x=>x.classList.toggle('active',x.dataset.p===currentPreset));
+
+  // —— 筛选/导出面板 折叠收起 ——
+  const rToggle=$('#r_toggle'), rPanel=$('#r_panel');
+  if(rToggle && rPanel){
+    rToggle.onclick=()=>{
+      const collapsed=rPanel.style.display==='none';
+      rPanel.style.display=collapsed?'':'none';
+      rToggle.textContent=collapsed?'收起 ▴':'展开 ▾';
+      localStorage.setItem('fw_records_collapsed',collapsed?'0':'1');
+    };
+  }
 
   refresh();
 }
@@ -1563,7 +1577,7 @@ function V_settings(v){
     <div class="field"><label>先验证当前主密码</label><input id="s_bio_pwd" type="password" placeholder="输入主密码"></div>
     <div class="row" style="margin-top:12px">
       <button class="primary-btn" id="s_bio_bind" ${bioBound?'disabled style="opacity:.5;cursor:not-allowed"':''}>${bioBound?'已绑定':'绑定生物识别'}</button>
-      <button class="ghost-btn" id="s_bio_unbind" ${bioBound?'':'disabled style="opacity:.5;cursor:not-allowed"'} ${bioBound?'':'style="opacity:.5;cursor:not-allowed"'}>解绑</button>
+      <button class="ghost-btn" id="s_bio_unbind" ${bioBound?'':'disabled style="opacity:.5;cursor:not-allowed"'}>解绑</button>
     </div>
     <p class="tiny muted" id="s_bio_hint" style="margin-top:8px">${bioBound?'当前设备已绑定生物识别。':'尚未绑定。'}</p>`;
   $('#s_save').closest('.card.glass').after(bioCard);
