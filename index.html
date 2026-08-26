@@ -143,6 +143,21 @@ td.num{text-align:right; font-variant-numeric:tabular-nums; font-weight:700}
 .link-btn{color:#cbb6ff; cursor:pointer; background:none; border:none; font-size:12.5px; padding:4px 6px}
 .link-btn:hover{text-decoration:underline}
 
+/* ===== 原生日期选择器 & 选中后日期信息行 ===== */
+input[type="date"]{background:rgba(255,255,255,.04); border:1px solid var(--border); color:#fff; border-radius:var(--radius-sm); padding:9px 11px; font-size:13.5px; font-family:inherit}
+input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(.7); cursor:pointer}
+input[type="date"]::-webkit-datetime-edit{color:#fff}
+input[type="date"]:focus{outline:none; border-color:var(--primary)}
+.date-info-row{margin:-4px 0 6px; font-size:12.5px}
+.date-info{color:var(--muted)}
+.date-info b{color:#fff; font-variant-numeric:tabular-nums}
+.date-info .lunar{color:#ffd28a}
+
+/* ===== 记账明细：筛选/导出栏常驻顶部（不被列表滚走） ===== */
+.r-filterbar{position:sticky; top:84px; z-index:15; margin-bottom:14px;
+  background:linear-gradient(180deg, rgba(20,18,28,.97), rgba(16,14,22,.97));
+  backdrop-filter:blur(8px); border:1px solid var(--border); box-shadow:0 6px 18px rgba(0,0,0,.35)}
+
 /* ===== 弹窗 ===== */
 .modal-root{position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center}
 .modal-mask{position:absolute; inset:0; background:rgba(0,0,0,.6); backdrop-filter:blur(3px)}
@@ -345,6 +360,7 @@ td.num{text-align:right; font-variant-numeric:tabular-nums; font-weight:700}
     <p class="muted" id="lockHint">请输入访问密码</p>
     <input id="lockInput" type="password" inputmode="numeric" placeholder="密码" autocomplete="off" />
     <button id="unlockBtn" class="primary-btn block">进入</button>
+    <button id="bioBtn" class="primary-btn block" style="display:none;margin-top:10px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);box-shadow:0 4px 14px rgba(59,130,246,.35)">👆 指纹快捷解锁</button>
     <p class="tiny muted">首次使用请到「设置」中设置密码；默认密码 0000</p>
   </div>
 </div>
@@ -421,6 +437,25 @@ function weekRangeOf(dmy){
   return {start:mon, end:dmyAddDays(mon,6)};
 }
 const WEEK_CN=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+
+/* 原生日期选择器：内部统一 DD-MM-YYYY，input[type=date] 用 YYYY-MM-DD */
+function todayISO(){const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());}
+function dmyToISO(dmy){const m=String(dmy||'').match(/^(\d{2})-(\d{2})-(\d{4})$/);return m?`${m[3]}-${m[2]}-${m[1]}`:'';}
+function isoToDmy(iso){const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?`${m[3]}-${m[2]}-${m[1]}`:'';}
+// 把任意存储日期(DD-MM-YYYY 或 YYYY-MM-DD)转成原生 date 控件能用的 YYYY-MM-DD
+function anyToISO(s){return dmyToISO(s)|| (String(s||'').match(/^\d{4}-\d{2}-\d{2}/)?s:'');}
+// 选中日期后同步展示「公历 / 星期 / 农历」，与首页状态栏风格一致
+function dateInfoHTML(dmy){
+  const d=dmyToDate(dmy)||new Date();
+  let lunar='🌙 农历--';
+  try{
+    if(typeof Solar!=='undefined' && typeof Lunar!=='undefined'){
+      const s=Solar.fromDate(d); const l=s.getLunar();
+      lunar='🌙 '+l.getYearInGanZhi()+'年('+l.getYearShengXiao()+') 农历'+l.getMonthInChinese()+'月'+l.getDayInChinese();
+    }
+  }catch(e){}
+  return `<span class="date-info"><b>${dmy}</b> · ${WEEK_CN[d.getDay()]} · <span class="lunar">${lunar}</span></span>`;
+}
 
 function fmtRM(n){const v=Number(n||0);return 'RM '+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fmtNum(n){return Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
@@ -611,7 +646,8 @@ function V_quick(v){
   </div>
   <div class="card glass">
     <div class="form-grid">
-      <div class="field"><label>日期 (DD-MM-YYYY)</label><input id="q_date" placeholder="DD-MM-YYYY"></div>
+      <div class="field"><label>日期</label><input id="q_date" type="date"></div>
+      <div id="q_dateInfo" class="date-info-row"></div>
       <div class="field"><label>收支类型</label>
         <select id="q_type"><option value="income">收入</option><option value="expense" ${draft.type==='expense'?'selected':''}>支出</option></select>
       </div>
@@ -649,7 +685,10 @@ function V_quick(v){
   </div>`;
 
   const amtInput=$('#q_amount'); bindAmountInput(amtInput);
-  $('#q_date').value=draft.date||todayDMY();
+  $('#q_date').value=anyToISO(draft.date)||todayISO();
+  // 同步展示 公历/星期/农历
+  const qShowInfo=()=>{ if($('#q_dateInfo')) $('#q_dateInfo').innerHTML=dateInfoHTML(isoToDmy($('#q_date').value)); };
+  $('#q_date').addEventListener('change',qShowInfo); qShowInfo();
   amtInput.setAmount(draft.amount||0);
 
   // ===== 拍照/上传图片 → OCR 填充 =====
@@ -701,15 +740,16 @@ function V_quick(v){
     if(m) amt=m[1];
     if(!amt){ const all=text.match(/\d{1,5}\.\d{2}/g)||[]; amt=all.length?all[all.length-1]:null; }
     if(amt) amtInput.setAmount(parseFloat(amt));
-    // 日期:DD/MM/YYYY 或 DD-MM-YYYY 或 YYYY-MM-DD
+    // 日期:DD/MM/YYYY 或 DD-MM-YYYY 或 YYYY-MM-DD → 原生 date 控件用 ISO(YYYY-MM-DD)
     const dm=text.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
     if(dm){
       let d=dm[1].padStart(2,'0'),mo=dm[2].padStart(2,'0'),y=dm[3];
       if(y.length===2) y='20'+y;
-      $('#q_date').value=`${d}-${mo}-${y}`;
+      $('#q_date').value=`${y}-${mo}-${d}`;
+      if($('#q_dateInfo')) $('#q_dateInfo').innerHTML=dateInfoHTML(`${d}-${mo}-${y}`);
     }else{
       const iso=text.match(/(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/);
-      if(iso){ $('#q_date').value=`${iso[3].padStart(2,'0')}-${iso[2].padStart(2,'0')}-${iso[1]}`; }
+      if(iso){ const v=`${iso[1]}-${iso[2].padStart(2,'0')}-${iso[3].padStart(2,'0')}`; $('#q_date').value=v; if($('#q_dateInfo')) $('#q_dateInfo').innerHTML=dateInfoHTML(isoToDmy(v)); }
     }
     // 备注:取 OCR第一行非数字行
     const firstLine=(text.split(/\r?\n/).find(l=>l.trim()&&!/^\d/.test(l.trim()))||'').trim().slice(0,60);
@@ -730,8 +770,8 @@ function V_quick(v){
   $('#q_cat').onchange=()=>{};
 
   $('#q_save').onclick=async()=>{
-    const date=$('#q_date').value.trim()||todayDMY();
-    if(!/^\d{2}-\d{2}-\d{4}$/.test(date)){toast('日期格式：DD-MM-YYYY');return;}
+    const date=isoToDmy($('#q_date').value.trim())||todayDMY();
+    if(!/^\d{2}-\d{2}-\d{4}$/.test(date)){toast('请选择日期');return;}
     const type=$('#q_type').value;
     const amount=amtInput.getAmount();
     if(!amount||amount<=0){toast('请输入金额');return;}
@@ -799,7 +839,7 @@ function V_records(v){
     return {label,bad,i,ex,bal:i-ex};
   });
   v.innerHTML=`
-  <div class="card glass">
+  <div class="card glass r-filterbar" id="r_filterbar">
     <div class="section-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <span>🔍 筛选 & 导出</span>
       <span class="filter-tag">${draft.preset==='custom'?'自定义':(draft.preset||'全部记录')}</span>
@@ -814,9 +854,9 @@ function V_records(v){
       <button data-p="custom">自定义:</button>
     </div>
     <div class="form-grid" style="margin-top:10px">
-      <div class="field"><label>年/月/日</label><input id="r_start" placeholder="DD-MM-YYYY" value="${esc(draft.start||'')}"></div>
+      <div class="field"><label>年/月/日</label><input id="r_start" type="date" value="${esc(anyToISO(draft.start)||'')}"></div>
       <div class="field"><label>至</label></div>
-      <div class="field"><label>年/月/日</label><input id="r_end" placeholder="DD-MM-YYYY" value="${esc(draft.end||'')}"></div>
+      <div class="field"><label>年/月/日</label><input id="r_end" type="date" value="${esc(anyToISO(draft.end)||'')}"></div>
       <div class="field"><label>类型</label><select id="r_type"><option value="">全部</option><option value="income">收入</option><option value="expense">支出</option><option value="transfer">转账</option></select></div>
       <div class="field"><label>关键字</label><input id="r_kw" placeholder="分类/备注/成员" value="${esc(draft.kw||'')}"></div>
     </div>
@@ -842,8 +882,8 @@ function V_records(v){
     <tbody id="r_body"></tbody>
   </table></div>`;
   function refresh(){
-    const start=$('#r_start').value.trim()||'01-01-1970';
-    const end=$('#r_end').value.trim()||'31-12-2999';
+    const start=isoToDmy($('#r_start').value.trim())||'01-01-1970';
+    const end=isoToDmy($('#r_end').value.trim())||'31-12-2999';
     const tp=$('#r_type').value;
     const kw=$('#r_kw').value.trim();
     let arr=S.records.slice();
@@ -889,7 +929,7 @@ function V_records(v){
     });
   }
   $('#r_q').onclick=()=>{
-    const cur={start:$('#r_start').value,end:$('#r_end').value,kw:$('#r_kw').value,type:$('#r_type').value,preset:currentPreset};
+    const cur={start:isoToDmy($('#r_start').value),end:isoToDmy($('#r_end').value),kw:$('#r_kw').value,type:$('#r_type').value,preset:currentPreset};
     localStorage.setItem('fw_records_filter',JSON.stringify(cur));refresh();
   };
   $('#r_c').onclick=()=>{localStorage.removeItem('fw_records_filter');V_records(v);};
@@ -898,12 +938,12 @@ function V_records(v){
   // —— 快捷筛选预设 ——
   let currentPreset=draft.preset||'all';
   const presetMap={
-    today:()=>{const t=todayDMY();return {start:t,end:t};},
-    yesterday:()=>{const y=dmyAddDays(todayDMY(),-1);return {start:y,end:y};},
-    '7d':()=>{const t=todayDMY();return {start:dmyAddDays(t,-6),end:t};},
-    month:()=>{const d=new Date();const mo=monthRangeDMY(d.getFullYear(),d.getMonth()+1);return mo;},
-    all:()=>({start:'01-01-1970',end:'31-12-2999'}),
-    custom:()=>({start:$('#r_start').value||'01-01-1970',end:$('#r_end').value||'31-12-2999'}),
+    today:()=>{const t=todayISO();return {start:t,end:t};},
+    yesterday:()=>{const y=dmyToISO(dmyAddDays(todayDMY(),-1));return {start:y,end:y};},
+    '7d':()=>{const t=todayISO();return {start:dmyToISO(dmyAddDays(todayDMY(),-6)),end:t};},
+    month:()=>{const d=new Date();const mo=monthRangeDMY(d.getFullYear(),d.getMonth()+1);return {start:dmyToISO(mo.start),end:dmyToISO(mo.end)};},
+    all:()=>({start:'',end:''}),
+    custom:()=>({start:$('#r_start').value||'',end:$('#r_end').value||''}),
   };
   const presetLabel={today:'今天',yesterday:'昨天','7d':'近7天',month:'本月',all:'全部',custom:'自定义'};
   $$('#r_preset button').forEach(b=>b.onclick=()=>{
@@ -913,7 +953,7 @@ function V_records(v){
       const r=presetMap[currentPreset]();
       $('#r_start').value=r.start; $('#r_end').value=r.end;
     }
-    const cur={start:$('#r_start').value,end:$('#r_end').value,kw:$('#r_kw').value,type:$('#r_type').value,preset:currentPreset};
+    const cur={start:isoToDmy($('#r_start').value),end:isoToDmy($('#r_end').value),kw:$('#r_kw').value,type:$('#r_type').value,preset:currentPreset};
     localStorage.setItem('fw_records_filter',JSON.stringify(cur));
     refresh();
   });
@@ -939,8 +979,8 @@ function V_debts(v){
       <div class="field"><label>分期期数</label><input id="d_periods" inputmode="numeric" placeholder="例：36"></div>
       <div class="field"><label>每星期期供 (RM)</label><input id="d_weekly" inputmode="decimal" placeholder=""></div>
       <div class="field"><label>每月月供 (RM)</label><input id="d_monthly" inputmode="decimal" placeholder=""></div>
-      <div class="field"><label>还款起始日期</label><input id="d_start" placeholder="DD-MM-YYYY"></div>
-      <div class="field"><label>还款结束日期</label><input id="d_end" placeholder="DD-MM-YYYY"></div>
+      <div class="field"><label>还款起始日期</label><input id="d_start" type="date"></div>
+      <div class="field"><label>还款结束日期</label><input id="d_end" type="date"></div>
       <div class="field"><label>支付方式</label><select id="d_pay">${opt(LIB.payMethods)}</select></div>
       <div class="field"><label>状态</label><select id="d_status"><option>正常还款</option><option>已结清</option></select></div>
     </div>
@@ -978,7 +1018,7 @@ function V_debts(v){
       const d=S.debts.find(x=>x.id===b.dataset.edit); if(!d) return;
       $('#d_name').value=d.name; $('#d_total').value=d.totalAmount; $('#d_periods').value=d.periods||'';
       $('#d_weekly').value=d.weeklyPayment||''; $('#d_monthly').value=d.monthlyPayment||'';
-      $('#d_start').value=d.startDate||''; $('#d_end').value=d.endDate||'';
+      $('#d_start').value=anyToISO(d.startDate)||''; $('#d_end').value=anyToISO(d.endDate)||'';
       $('#d_pay').value=d.payMethod||''; $('#d_status').value=d.status||'正常还款';
       $('#d_add').dataset.edit=d.id;
     });
@@ -994,8 +1034,8 @@ function V_debts(v){
       periods:Number($('#d_periods').value)||0,
       weeklyPayment:Number($('#d_weekly').value)||0,
       monthlyPayment:Number($('#d_monthly').value)||0,
-      startDate:$('#d_start').value.trim(),
-      endDate:$('#d_end').value.trim(),
+      startDate:isoToDmy($('#d_start').value.trim()),
+      endDate:isoToDmy($('#d_end').value.trim()),
       payMethod:$('#d_pay').value,
       status:$('#d_status').value,
     });
@@ -1015,7 +1055,7 @@ function V_transfer(v){
   <div class="warn-banner"><div class="icon">🔁</div><div class="text">内部调拨不计入收支统计；保存后两个账户余额自动联动。</div></div>
   <div class="card glass">
     <div class="form-grid">
-      <div class="field"><label>日期 (DD-MM-YYYY)</label><input id="tf_date" placeholder="DD-MM-YYYY"></div>
+      <div class="field"><label>日期</label><input id="tf_date" type="date"></div>
       <div class="field"><label>金额</label><div class="amount-input-wrap"><span class="rm">RM</span><input id="tf_amount" inputmode="decimal"></div></div>
       <div class="field"><label>转出账户</label><select id="tf_from">${S.accounts.map(a=>`<option value="${a.name}">${esc(a.name)}（${fmtRM(a.balance)}）</option>`).join('')}</select></div>
       <div class="field"><label>转入账户</label><select id="tf_to">${S.accounts.map(a=>`<option value="${a.name}">${esc(a.name)}（${fmtRM(a.balance)}）</option>`).join('')}</select></div>
@@ -1028,7 +1068,7 @@ function V_transfer(v){
     ${S.accounts.map(a=>`<div class="card glass"><div class="label">${esc(a.name)}</div><div class="value">${fmtRM(a.balance)}</div></div>`).join('')}
   </div>`;
   const aInput=$('#tf_amount'); bindAmountInput(aInput);
-  $('#tf_date').value=todayDMY();
+  $('#tf_date').value=todayISO();
   $('#tf_save').onclick=async()=>{
     const from=$('#tf_from').value, to=$('#tf_to').value;
     if(from===to){toast('转出/转入不能相同');return;}
@@ -1037,7 +1077,7 @@ function V_transfer(v){
     if(fa.balance<amt){if(!confirm('转出账户余额不足，是否继续？'))return;}
     fa.balance-=amt; ta.balance+=amt;
     await dbPut('accounts',fa); await dbPut('accounts',ta);
-    const rec={id:uid(),date:$('#tf_date').value||todayDMY(),type:'transfer',dir:'transfer',amount:amt,
+    const rec={id:uid(),date:isoToDmy($('#tf_date').value)||todayDMY(),type:'transfer',dir:'transfer',amount:amt,
       category:'转账',note:$('#tf_note').value.trim(),fromAccount:from,toAccount:to,member:'',location:'',payMethod:'',txType:'',party:`${from} → ${to}`,createdAt:Date.now()};
     S.records.push(rec); await dbPut('records',rec);
     toast(`已转 ${fmtRM(amt)}：${from} → ${to}`);
@@ -1514,6 +1554,31 @@ function V_settings(v){
     if(n!==$('#s_new2').value){toast('两次输入不一致');return;}
     localStorage.setItem('fw_pwd',n); toast('密码已更新，请重新登录'); sessionStorage.setItem('fw_locked','1'); setTimeout(()=>location.reload(),800);
   };
+  // —— 生物识别快捷解锁（指纹/面容）——
+  const bioBound=localStorage.getItem('fw_bio')==='1';
+  const bioCard=document.createElement('div'); bioCard.className='card glass'; bioCard.style.marginTop='14px';
+  bioCard.innerHTML=`
+    <div class="section-title">👆 指纹/面容快捷解锁</div>
+    <p class="tiny muted" style="margin:4px 0 12px">绑定后可在锁屏用指纹/面容直接进入，<b>不替代主密码</b>。换设备需重新用主密码登录；清除浏览器存储会解绑。</p>
+    <div class="field"><label>先验证当前主密码</label><input id="s_bio_pwd" type="password" placeholder="输入主密码"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="primary-btn" id="s_bio_bind" ${bioBound?'disabled style="opacity:.5;cursor:not-allowed"':''}>${bioBound?'已绑定':'绑定生物识别'}</button>
+      <button class="ghost-btn" id="s_bio_unbind" ${bioBound?'':'disabled style="opacity:.5;cursor:not-allowed"'} ${bioBound?'':'style="opacity:.5;cursor:not-allowed"'}>解绑</button>
+    </div>
+    <p class="tiny muted" id="s_bio_hint" style="margin-top:8px">${bioBound?'当前设备已绑定生物识别。':'尚未绑定。'}</p>`;
+  $('#s_save').closest('.card.glass').after(bioCard);
+  const bioHint=()=>$('#s_bio_hint');
+  $('#s_bio_bind').onclick=async()=>{
+    if($('#s_bio_pwd').value!==pwd){toast('主密码错误，无法绑定');return;}
+    if(!isBioAvailable()){toast('当前环境不支持生物识别（需 HTTPS/localhost 且设备支持）');return;}
+    const ok=await bindBio();
+    if(ok){ toast('已绑定指纹/面容'); V_settings(v); }
+  };
+  $('#s_bio_unbind').onclick=async()=>{
+    if($('#s_bio_pwd').value!==pwd){toast('主密码错误，无法解绑');return;}
+    localStorage.removeItem('fw_bio'); localStorage.removeItem('fw_bio_cred');
+    toast('已解绑生物识别'); V_settings(v);
+  };
   $('#s_wipe').onclick=async()=>{
     if(!confirm('确定清空全部业务数据？此操作不可恢复！'))return;
     for(const s of ['records','debts','accounts','budgets','parties','receipts']){
@@ -1546,6 +1611,59 @@ function showLock(){
   $('#lockHint').textContent='请输入访问密码';
   $('#unlockBtn').onclick=()=>tryUnlock();
   $('#lockInput').onkeydown=e=>{if(e.key==='Enter')tryUnlock();};
+  // 生物识别快捷解锁：仅在安全上下文 + 设备支持平台认证器 + 已绑定时显示
+  const bioBtn=$('#bioBtn');
+  if(bioBtn){
+    if(isBioAvailable() && localStorage.getItem('fw_bio')==='1'){
+      bioBtn.style.display='block';
+      bioBtn.onclick=()=>bioUnlock();
+    } else {
+      bioBtn.style.display='none';
+    }
+  }
+}
+// 设备能力：HTTPS/localhost 且存在平台生物认证器
+function isBioAvailable(){
+  return !!window.isSecureContext && typeof PublicKeyCredential!=='undefined' &&
+    typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable==='function';
+}
+// base64url 编解码
+function bufToB64url(buf){return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+function b64urlToBuf(s){s=s.replace(/-/g,'+').replace(/_/g,'/');const bin=atob(s);const arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);return arr.buffer;}
+// 绑定本地生物识别（仅快捷解锁；不替代主密码）
+async function bindBio(){
+  if(!isBioAvailable()){toast('当前设备/环境不支持生物识别');return false;}
+  const avail=await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(()=>false);
+  if(!avail){toast('未检测到可用的指纹/面容模块');return false;}
+  try{
+    const userId=bufToB64url(crypto.getRandomValues(new Uint8Array(16)));
+    const challenge=crypto.getRandomValues(new Uint8Array(32));
+    const cred=await navigator.credentials.create({publicKey:{
+      challenge, rp:{name:'钰琦的记账本'}, user:{id:b64urlToBuf(userId), name:'owner', displayName:'记账本主人'},
+      pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
+      authenticatorSelection:{authenticatorAttachment:'platform', userVerification:'required', residentKey:'preferred'},
+      timeout:60000, attestation:'none'
+    }});
+    const credId=bufToB64url(cred.rawId);
+    localStorage.setItem('fw_bio','1');
+    localStorage.setItem('fw_bio_cred', JSON.stringify({id:credId, userId}));
+    return true;
+  }catch(e){ console.warn('绑定生物识别失败',e); toast('绑定失败：'+(e&&e.message||e)); return false; }
+}
+// 生物识别快捷解锁
+async function bioUnlock(){
+  if(localStorage.getItem('fw_bio')!=='1'){toast('尚未绑定生物识别');return;}
+  const saved=JSON.parse(localStorage.getItem('fw_bio_cred')||'{}');
+  if(!saved.id){toast('绑定信息缺失，请用密码登录');return;}
+  try{
+    const cred=await navigator.credentials.get({publicKey:{
+      challenge:crypto.getRandomValues(new Uint8Array(32)),
+      allowCredentials:[{type:'public-key', id:b64urlToBuf(saved.id)}],
+      userVerification:'required', timeout:60000
+    }});
+    if(cred){ sessionStorage.removeItem('fw_locked'); $('#lockScreen').classList.add('hidden'); await loadAll(); go('overview'); }
+    else { toast('识别未通过，请用密码登录'); }
+  }catch(e){ console.warn('生物识别解锁失败',e); toast('指纹/面容验证未通过，请用密码登录'); }
 }
 async function tryUnlock(){
   const pwd=localStorage.getItem('fw_pwd')||'0000';
