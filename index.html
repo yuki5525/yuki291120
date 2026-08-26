@@ -387,7 +387,7 @@ input[type="date"]:focus{outline:none; border-color:var(--primary)}
 const LIB = {
   incomeCats:  ['资金转账','私人转账','借款','小说收益','档口盈利','买卖酬劳','工资','奖金','兼职','理财收益','红包','其他收入'],
   expenseCats: ['餐饮','交通','购物','孩子','电子烟','香烟','Shopee','拼多多','淘宝','京东','抖音','车贷','水费','电费','TM Unifi','通讯','红事','白事','娱乐','借款','还款','预支','医疗','加油','维修','保险','学杂费','旅游','婴儿用品','SPEED 99','7 ELEVEN','LONGWAN','电器','电子产品','保健品','水族用品','宠物用品'],
-  items:       ['饮料🥤','白咖啡冰☕️','面包🍞','炒饭🍛','鸡饭🍛','粿条汤🍜','云吞面🍜','爪哇面🍜','经济饭🍛','炒粿条🍝','意大利面🍝','韩式饭/面','汉堡🍔','卤肉🧆','零食🍬','冰淇淋🍦','NUGGET🥓','炸鸡🍗','PIZZA🍕','面包🍞','薯条🍟','寿司🍣','华夫饼🧇','Mc DONAL🍟','KFC🍖','LAKSA🍲','NASI LEMAK🍚','蛋糕🍰','文具✏️','衣裤鞋袜👗','内衣裤👙','蔬菜🥬','鸡肉🐔','猪肉🐷','海鲜🐟🦐🦀','零件⚙️','五金件🔩','满煎糕🥐','塔可TACO🌮','生计用品🔞','糕点🥐','炸糕🥐','卫生棉💧','卫生纸🧻'],
+  items:       ['饮料🥤','白咖啡冰☕️','面包🍞','点心🥧','炒饭🍛','鸡饭🍛','粿条汤🍜','云吞面🍜','爪哇面🍜','经济饭🍛','炒粿条🍝','意大利面🍝','韩式饭/面','汉堡🍔','卤肉🧆','零食🍬','冰淇淋🍦','NUGGET🥓','炸鸡🍗','PIZZA🍕','面包🍞','薯条🍟','寿司🍣','华夫饼🧇','Mc DONAL🍟','KFC🍖','LAKSA🍲','NASI LEMAK🍚','蛋糕🍰','文具✏️','衣裤鞋袜👗','内衣裤👙','蔬菜🥬','鸡肉🐔','猪肉🐷','海鲜🐟🦐🦀','零件⚙️','五金件🔩','满煎糕🥐','塔可TACO🌮','生计用品🔞','糕点🥐','炸糕🥐','卫生棉💧','卫生纸🧻'],
   members:     ['👩我','🙎‍♂️老公','👧Queency','👧Gabby','👦Ambrose','👩🏻‍🦰俩女儿','👩‍👧‍👦母女仨','家婆','妹妹','爸爸','妈妈','叔叔','朋友','其他'],
   locations:   ['28间','二街','长城咖啡店','77咖啡店','百福叻沙','家园咖啡店','中兴咖啡店','国记点心','十全十美美食广场','银火饮食中心','鸿运咖啡店','88咖啡店','大年咖啡店45菜市场','LOTUS','ECONSAVE','ECONO JAYA','HASANI BOOK','ECO','MR DIY','EASY HOME','UTC巴刹','老街场','UTC','MIXUE蜜雪','TAMAN KELADI','TAMAN INTAN','鱼店','其他'],
   payMethods:  ['现金','Tng Ewallet','Ryt Bank','Ryt PayLater','RHB Bank','GX Bank','Boost','Grab Pay','Shopee Pay','支付宝','微信','其他'],
@@ -581,11 +581,12 @@ function V_overview(v){
   const plTotal=S.debts.filter(isPayLater).reduce((a,d)=>a+debtRemaining(d),0);
 
   v.innerHTML=`
-  <div class="section-title">💳 账户余额（第一位）</div>
+  <div class="section-title">💳 账户余额</div>
   <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">
     ${S.accounts.filter(a=>a.name!=='电子钱包').map(a=>`<div class="card glass"><div class="label">${esc(a.name)}</div><div class="value">${fmtRM(a.balance)}</div></div>`).join('')}
   </div>
 
+  <div class="section-title">📈 收支概览</div>
   <div class="cards">
     <div class="card glass"><div class="label">📅 本日收入</div><div class="value income">${fmtRM(dayInc)}</div><div class="sub">${t}</div></div>
     <div class="card glass"><div class="label">📅 本日支出</div><div class="value expense">${fmtRM(dayExp)}</div><div class="sub">本日结余 ${fmtRM(dayInc-dayExp)}</div></div>
@@ -595,6 +596,7 @@ function V_overview(v){
     <div class="card glass"><div class="label">📆 本月支出</div><div class="value expense">${fmtRM(moExp)}</div><div class="sub">本月结余 ${fmtRM(moInc-moExp)}</div></div>
     <div class="card glass"><div class="label">💰 实时总结余</div><div class="value ${balance>=0?'':'warn'}">${fmtRM(balance)}</div><div class="sub">累计收入-累计支出</div></div>
     <div class="card glass" id="plCard"><div class="label">📑 小资贷款·待还</div><div class="value warn" id="plVal">${fmtRM(plTotal)}</div><div class="sub">含 PayLater 联动债务</div></div>
+    ${S.accounts.filter(a=>a.name==='电子钱包').map(a=>`<div class="card glass"><div class="label">${esc(a.name)}</div><div class="value">${fmtRM(a.balance)}</div></div>`).join('')}
   </div>
 
   <div class="section-title">⚡ 快捷操作</div>
@@ -608,32 +610,33 @@ function V_overview(v){
 
 /* ---------- POS 金额输入 ---------- */
 function bindAmountInput(input){
-  // 用户输入什么就是什么(650 → 650;520000 → 520000;63000 → 63000)
+  // 用户输入什么就是什么(650 → 650;520000 → 520000;3.72 → 3.72)
   // 仅做展示格式化:整数不显示 .00,有小数才最多显示 2 位;不做 ÷100 / ÷1000 任何缩放。
-  const fmt=()=>{
-    let s=String(raw);
-    if(s===''){input.value='';return;}
-    if(!s.includes('.')){input.value=s;return;}
-    const [a,b]=s.split('.');
-    input.value=a+'.'+(b||'').slice(0,2);
-  };
+  // 以 input 事件为唯一数据源 → 桌面/手机软键盘/粘贴/自动填充都能正确保留小数。
   let raw='';
-  const sync=()=>{ const d=(input.value||'').replace(/[^0-9.]/g,''); raw=d; };
+  const reformat=()=>{
+    if(raw===''||raw==='.'){ input.value=(raw==='.')?'0.':''; return; }
+    if(raw.indexOf('.')>=0){ const [a,b]=raw.split('.'); input.value=a+'.'+(b||'').slice(0,2); }
+    else input.value=raw;
+  };
+  const clean=(s)=>{
+    s=String(s==null?'':s).replace(/[^0-9.]/g,'');
+    const fd=s.indexOf('.');
+    if(fd>=0) s=s.slice(0,fd+1)+s.slice(fd+1).replace(/\./g,''); // 只保留第一个小数点
+    if(s.indexOf('.')>=0){ const m=s.match(/^(\d*)\.(\d{0,2})/); if(m) s=m[1]+'.'+m[2]; else { const p=s.indexOf('.'); s=s.slice(0,p+1)+(s.slice(p+1)||'').slice(0,2); } }
+    return s;
+  };
   input.readOnly=false;
-  input.addEventListener('focus',()=>{ sync(); input.select(); });
-  input.addEventListener('keydown',(e)=>{
-    sync();
-    if(e.key==='Backspace'){ e.preventDefault(); raw=raw.slice(0,-1); fmt(); return; }
-    if(e.key==='.'||e.key===','){
-      if(!raw.includes('.')){ e.preventDefault(); raw = raw ? raw+'.' : '0.'; fmt(); }
-      return;
-    }
-    if(/^[0-9]$/.test(e.key)){ e.preventDefault(); raw += e.key; fmt(); }
+  input.addEventListener('input',()=>{ raw=clean(input.value); if(input.value!==raw) input.value=raw; });
+  input.addEventListener('blur',()=>{
+    if(!raw||raw==='.'||raw==='0.'){ raw=''; input.value=''; return; }
+    let [a,b]=raw.split('.');
+    if(b!==undefined){ b=b.replace(/0+$/,''); raw=a+(b?'.'+b:''); }
+    if(raw.endsWith('.')) raw=raw.slice(0,-1);
+    reformat();
   });
-  input.addEventListener('blur',()=>{ if(!raw) input.value=''; else fmt(); });
-  input.dataset.pos='1';
   input.getAmount=()=>{ const n=parseFloat(raw); return isNaN(n)?0:n; };
-  input.setAmount=(n)=>{ if(!n){raw='';fmt();return;} const s=String(n); raw=s.indexOf('.')>=0?s.replace(/0+$/,'').replace(/\.$/,''):s; fmt(); };
+  input.setAmount=(n)=>{ if(!n){raw='';input.value='';return;} const s=String(n); raw=s.indexOf('.')>=0?s.replace(/0+$/,'').replace(/\.$/,''):s; reformat(); };
 }
 
 /* ---------- 视图：快速记账 ---------- */
@@ -665,7 +668,7 @@ function V_quick(v){
       <div class="field"><label>消费分类</label><select id="q_cat"></select></div>
       <div class="field"><label>物品</label><select id="q_item"><option value="">不选</option>${opt(LIB.items,draft.item)}</select></div>
       <div class="field"><label>备注（手写）</label><input id="q_note" value="${esc(draft.note||'')}" placeholder="可选"></div>
-      <div class="field"><label>消费地点</label><select id="q_loc">${opt(LIB.locations,draft.location)}</select></div>
+      <div class="field"><label>消费地点</label><select id="q_loc">${opt(['不选',...LIB.locations],draft.location)}</select></div>
       <div class="field" id="q_partyWrap" style="display:none"><label>往来对象（付款方/借款人）</label>
         <input id="q_party" list="partyList" placeholder="从成员选择或手填"><datalist id="partyList">${LIB.members.map(p=>`<option value="${esc(p)}">`).join('')}${S.parties.map(p=>`<option value="${esc(p.name)}">`).join('')}</datalist>
       </div>
@@ -908,8 +911,9 @@ function V_records(v){
       <td>${esc(r.member||'')}</td>
       <td>${esc(r.party||'')}</td>
       <td><button class="link-btn" data-receipt="${r.id}">📷</button></td>
+      <td><button class="link-btn" data-edit="${r.id}">修改</button></td>
       <td><button class="link-btn" data-del="${r.id}">删除</button></td>
-    </tr>`).join(''):'<tr><td colspan="14" class="empty">暂无数据</td></tr>';
+    </tr>`).join(''):'<tr><td colspan="15" class="empty">暂无数据</td></tr>';
     $('#r_count').textContent=`共 ${arr.length} 条`;
     $$('#r_body [data-receipt]').forEach(b=>b.onclick=async()=>{
       const id=b.dataset.receipt;
@@ -930,6 +934,54 @@ function V_records(v){
       try{ await dbDel('receipts',id); }catch(e){} // 同步删小票,释放 IndexedDB 空间
       refresh();
     });
+    $$('#r_body [data-edit]').forEach(b=>b.onclick=()=>{ editRecord(b.dataset.edit); });
+  }
+  // —— 修改流水：弹窗编辑后写回 IndexedDB ——
+  function editRecord(id){
+    const rec=S.records.find(r=>r.id===id); if(!rec) return;
+    const isTransfer=rec.type==='transfer';
+    const typeOpts=`<option value="income" ${rec.type==='income'?'selected':''}>收入</option><option value="expense" ${rec.type==='expense'?'selected':''}>支出</option><option value="transfer" ${rec.type==='transfer'?'selected':''}>转账</option>`;
+    const catOpts=(rec.type==='income'?LIB.incomeCats:LIB.expenseCats);
+    const html=`
+    <div class="card glass" style="margin:0;box-shadow:none">
+      <div class="form-grid">
+        <div class="field"><label>日期</label><input id="e_date" type="date" value="${esc(anyToISO(rec.date)||'')}"></div>
+        <div class="field"><label>类型</label><select id="e_type">${typeOpts}</select></div>
+        <div class="field"><label>金额</label><div class="amount-input-wrap"><span class="rm">RM</span><input id="e_amount" inputmode="decimal"></div></div>
+        <div class="field"><label>消费分类</label><select id="e_cat">${opt(catOpts, rec.category)}</select></div>
+        <div class="field"><label>物品</label><select id="e_item"><option value="">不选</option>${opt(LIB.items,rec.item)}</select></div>
+        <div class="field"><label>备注</label><input id="e_note" value="${esc(rec.note||'')}"></div>
+        <div class="field"><label>消费地点</label><select id="e_loc">${opt(['不选',...LIB.locations],rec.location)}</select></div>
+        <div class="field"><label>支付方式</label><select id="e_pay">${opt(LIB.payMethods,rec.payMethod)}</select></div>
+        <div class="field"><label>交易类型</label><select id="e_tx">${opt(LIB.txTypes,rec.txType)}</select></div>
+        <div class="field"><label>🔅成员</label><select id="e_member">${opt(LIB.members,rec.member)}</select></div>
+        <div class="field"><label>单号/E-Invoice</label><input id="e_order" value="${esc(rec.orderNo||'')}"></div>
+      </div>
+      ${isTransfer?'<p class="tiny muted" style="margin:6px 0 0">⚠️ 转账记录：此处修改金额/账户不会自动重算双方余额，如需调整余额请到「转账」页重做。</p>':''}
+      <div class="row" style="margin-top:12px"><button class="primary-btn" id="e_save">保存修改</button><button class="ghost-btn" id="e_cancel">取消</button></div>
+    </div>`;
+    showModal('✏️ 修改流水', html);
+    const eAmt=$('#e_amount'); bindAmountInput(eAmt); eAmt.setAmount(rec.amount||0);
+    $('#e_type').onchange=()=>{
+      const t=$('#e_type').value;
+      const co=(t==='income'?LIB.incomeCats:LIB.expenseCats);
+      $('#e_cat').innerHTML=opt(co, co.includes(rec.category)?rec.category:co[0]);
+    };
+    $('#e_save').onclick=async()=>{
+      const date=isoToDmy($('#e_date').value.trim())||rec.date;
+      const type=$('#e_type').value;
+      const amount=eAmt.getAmount();
+      if(!amount||amount<=0){toast('请输入金额');return;}
+      Object.assign(rec,{
+        date, type, dir:(type==='income'?'in':type==='expense'?'out':'transfer'), amount,
+        category:$('#e_cat').value, item:$('#e_item').value, note:$('#e_note').value.trim(),
+        location:$('#e_loc').value, payMethod:$('#e_pay').value, txType:$('#e_tx').value,
+        member:$('#e_member').value, orderNo:$('#e_order').value.trim()
+      });
+      await dbPut('records',rec);
+      toast('已保存修改'); $('#modalClose').click(); refresh();
+    };
+    $('#e_cancel').onclick=()=>$('#modalClose').click();
   }
   $('#r_q').onclick=()=>{
     const cur={start:isoToDmy($('#r_start').value),end:isoToDmy($('#r_end').value),kw:$('#r_kw').value,type:$('#r_type').value,preset:currentPreset};
@@ -1655,14 +1707,24 @@ async function bindBio(){
     const cred=await navigator.credentials.create({publicKey:{
       challenge, rp:{name:'钰琦的记账本'}, user:{id:b64urlToBuf(userId), name:'owner', displayName:'记账本主人'},
       pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
-      authenticatorSelection:{authenticatorAttachment:'platform', userVerification:'required', residentKey:'preferred'},
+      // 不强制 platform 附件、residentKey 改为 discouraged：规避 Android Chrome
+      // "An Unknown error occurred while talking to the credential manager" 报错
+      authenticatorSelection:{ userVerification:'required', residentKey:'discouraged' },
       timeout:60000, attestation:'none'
     }});
     const credId=bufToB64url(cred.rawId);
     localStorage.setItem('fw_bio','1');
     localStorage.setItem('fw_bio_cred', JSON.stringify({id:credId, userId}));
     return true;
-  }catch(e){ console.warn('绑定生物识别失败',e); toast('绑定失败：'+(e&&e.message||e)); return false; }
+  }catch(e){
+    console.warn('绑定生物识别失败',e);
+    let msg='绑定失败';
+    if(e&&e.name==='NotAllowedError') msg='已取消或超时，请重试';
+    else if(e&&e.message) msg='绑定失败：'+e.message;
+    else if(e&&e.name) msg='绑定失败：'+e.name;
+    toast(msg);
+    return false;
+  }
 }
 // 生物识别快捷解锁
 async function bioUnlock(){
