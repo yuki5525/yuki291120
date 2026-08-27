@@ -108,6 +108,10 @@ body{
 .card .value{font-size:24px; font-weight:800; letter-spacing:.3px}
 .card .sub{font-size:11.5px; color:var(--muted); margin-top:6px}
 .value.income{color:var(--income)} .value.expense{color:var(--expense)} .value.warn{color:var(--warn)}
+/* 账户透支：余额<0 红字 + ⚠️ */
+.bal-neg{color:var(--warn)!important}
+.total-asset{background:linear-gradient(135deg, rgba(124,58,237,.18), rgba(20,18,28,.9))}
+.total-asset.bal-neg{box-shadow:0 0 0 1px var(--warn), 0 6px 20px rgba(255,92,92,.25)}
 
 /* ===== 表单 ===== */
 .form-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px}
@@ -390,9 +394,9 @@ const LIB = {
   items:       ['饮料🥤','白咖啡冰☕️','面包🍞','点心🥧','炒饭🍛','鸡饭🍛','粿条汤🍜','云吞面🍜','爪哇面🍜','经济饭🍛','炒粿条🍝','意大利面🍝','韩式饭/面','汉堡🍔','卤肉🧆','零食🍬','冰淇淋🍦','NUGGET🥓','炸鸡🍗','PIZZA🍕','面包🍞','薯条🍟','寿司🍣','华夫饼🧇','Mc DONAL🍟','KFC🍖','LAKSA🍲','NASI LEMAK🍚','蛋糕🍰','文具✏️','衣裤鞋袜👗','内衣裤👙','蔬菜🥬','鸡肉🐔','猪肉🐷','海鲜🐟🦐🦀','零件⚙️','五金件🔩','满煎糕🥐','塔可TACO🌮','生计用品🔞','糕点🥐','炸糕🥐','卫生棉💧','卫生纸🧻'],
   members:     ['👩我','🙎‍♂️老公','👧Queency','👧Gabby','👦Ambrose','👩🏻‍🦰俩女儿','👩‍👧‍👦母女仨','家婆','妹妹','爸爸','妈妈','叔叔','朋友','其他'],
   locations:   ['28间','二街','长城咖啡店','77咖啡店','百福叻沙','家园咖啡店','中兴咖啡店','国记点心','十全十美美食广场','银火饮食中心','鸿运咖啡店','88咖啡店','大年咖啡店45菜市场','LOTUS','ECONSAVE','ECONO JAYA','HASANI BOOK','ECO','MR DIY','EASY HOME','UTC巴刹','老街场','UTC','MIXUE蜜雪','TAMAN KELADI','TAMAN INTAN','鱼店','其他'],
-  payMethods:  ['现金','Tng Ewallet','Ryt Bank','Ryt PayLater','RHB Bank','GX Bank','Boost','Grab Pay','Shopee Pay','支付宝','微信','其他'],
+  payMethods:  ['现金','电子钱包','PayLater','Tng Ewallet','Ryt Bank','Ryt PayLater','RHB Bank','GX Bank','Boost','Grab Pay','Shopee Pay','支付宝','微信','其他'],
   txTypes:     ['CASH','DEBIT CARD','DUITNOW TRANSFER','QR SCAN TRANSFER'],
-  accounts:    ['现金','RHB Bank','Ryt Bank','GX Bank','电子钱包'],
+  accounts:    ['现金','RHB Bank','Ryt Bank','GX Bank','电子钱包','PayLater'],
 };
 
 /* ---------- 工具 ---------- */
@@ -487,6 +491,34 @@ function openDB(){
 async function dbAll(store){const db=await openDB();return new Promise(res=>{const t=db.transaction(store,'readonly').objectStore(store).getAll();t.onsuccess=()=>res(t.result||[]);});}
 async function dbPut(store,obj){const db=await openDB();return new Promise((res,rej)=>{const t=db.transaction(store,'readwrite').objectStore(store).put(obj);t.onsuccess=()=>res(obj);t.onerror=()=>rej(t.error);});}
 async function dbDel(store,id){const db=await openDB();return new Promise(res=>{const t=db.transaction(store,'readwrite').objectStore(store).delete(id);t.onsuccess=res;});}
+// 派生账户余额：期初余额 + 交易流水(收入+/支出-，按支付方式匹配账户；转账按 from/to 调两个账户)。
+// 期初未录入按 0 计 → 始终能看到余额；可在「账户」页补录期初以修正。
+function accountBalance(name){
+  const acc=S.accounts.find(a=>a.name===name);
+  if(!acc) return 0;
+  let bal=Number(acc.opening)||0;
+  for(const r of S.records){
+    if(r.type==='transfer'){
+      if(r.toAccount===name) bal+=Number(r.amount)||0;
+      if(r.fromAccount===name) bal-=Number(r.amount)||0;
+    } else if(r.payMethod===name){
+      bal += (r.type==='income'? 1 : -1)*(Number(r.amount)||0);
+    }
+  }
+  return Math.round(bal*100)/100;
+}
+function totalAssets(){
+  let t=0;
+  for(const a of S.accounts) t+=accountBalance(a.name);
+  return Math.round(t*100)/100;
+}
+// 余额展示：<0 红字+⚠️；期初未设 → 小角标提示
+function balText(name){
+  const acc=S.accounts.find(a=>a.name===name);
+  const b=accountBalance(name);
+  const unset=!acc || acc.opening==null || acc.opening==='';
+  return {text:fmtRM(b), neg:b<0, unset};
+}
 
 /* ---------- 状态 ---------- */
 const S={records:[],debts:[],accounts:[],budgets:[],parties:[],ready:false};
@@ -497,12 +529,18 @@ async function loadAll(){
   S.budgets=await dbAll('budgets');
   S.parties=await dbAll('parties');
   if(S.accounts.length===0){
-    S.accounts=LIB.accounts.map(a=>({id:uid(),name:a,balance:0}));
+    S.accounts=LIB.accounts.map(a=>({id:uid(),name:a})); // opening 留空 → 派生余额按 0 起算
     for(const a of S.accounts)await dbPut('accounts',a);
   }
-  // 兼容旧数据：补齐 Ryt Bank / GX Bank
-  for(const name of ['Ryt Bank','GX Bank']){
-    if(!S.accounts.find(a=>a.name===name)){const a={id:uid(),name,balance:0};S.accounts.push(a);await dbPut('accounts',a);}
+  // 兼容旧数据：把上一版存的 account.balance 迁移为 opening
+  for(const a of S.accounts){
+    if((a.opening==null||a.opening==='') && a.balance!=null && a.balance!==''){
+      a.opening=a.balance; delete a.balance; await dbPut('accounts',a);
+    }
+  }
+  // 兼容旧数据：补齐 Ryt Bank / GX Bank / PayLater
+  for(const name of ['Ryt Bank','GX Bank','PayLater']){
+    if(!S.accounts.find(a=>a.name===name)){const a={id:uid(),name};S.accounts.push(a);await dbPut('accounts',a);}
   }
   // 首次使用：种入示例 PayLater 债务，便于演示联动
   if(S.debts.length===0){
@@ -547,6 +585,7 @@ const NAV=[
   {k:'records',  ic:'📋', t:'记账明细'},
   {k:'debts',    ic:'💳', t:'债务台账'},
   {k:'transfer', ic:'🔁', t:'账户转账'},
+  {k:'accounts', ic:'🏦', t:'账户期初'},
   {k:'stats',    ic:'📈', t:'数据统计'},
   {k:'budget',   ic:'🎯', t:'预算管理'},
   {k:'calendar', ic:'🗓️', t:'日历'},
@@ -581,9 +620,14 @@ function V_overview(v){
   const plTotal=S.debts.filter(isPayLater).reduce((a,d)=>a+debtRemaining(d),0);
 
   v.innerHTML=`
+  <div class="card glass total-asset${totalAssets()<0?' bal-neg':''}" style="margin-bottom:14px">
+    <div class="label">💰 总资产（全部账户余额合计）</div>
+    <div class="value" style="font-size:30px">${fmtRM(totalAssets())}</div>
+    <div class="sub">${S.accounts.some(a=>!a.opening&&a.opening!==0)?`部分账户未录期初余额 → <a href="#" onclick="go('accounts');return false" style="color:#cbb6ff">账户期初</a>补录`:'期初余额 + 收入 − 支出 + 转账净值'}</div>
+  </div>
   <div class="section-title">💳 账户余额</div>
   <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">
-    ${S.accounts.filter(a=>a.name!=='电子钱包').map(a=>`<div class="card glass"><div class="label">${esc(a.name)}</div><div class="value">${fmtRM(a.balance)}</div></div>`).join('')}
+    ${S.accounts.map(a=>{const b=balText(a.name);return `<div class="card glass"><div class="label">${esc(a.name)}</div><div class="value ${b.neg?'bal-neg':''}">${b.neg?'⚠️ ':''}${b.text}</div></div>`;}).join('')}
   </div>
 
   <div class="section-title">📈 收支概览</div>
@@ -596,7 +640,6 @@ function V_overview(v){
     <div class="card glass"><div class="label">📆 本月支出</div><div class="value expense">${fmtRM(moExp)}</div><div class="sub">本月结余 ${fmtRM(moInc-moExp)}</div></div>
     <div class="card glass"><div class="label">💰 实时总结余</div><div class="value ${balance>=0?'':'warn'}">${fmtRM(balance)}</div><div class="sub">累计收入-累计支出</div></div>
     <div class="card glass" id="plCard"><div class="label">📑 小资贷款·待还</div><div class="value warn" id="plVal">${fmtRM(plTotal)}</div><div class="sub">含 PayLater 联动债务</div></div>
-    ${S.accounts.filter(a=>a.name==='电子钱包').map(a=>`<div class="card glass"><div class="label">${esc(a.name)}</div><div class="value">${fmtRM(a.balance)}</div></div>`).join('')}
   </div>
 
   <div class="section-title">⚡ 快捷操作</div>
@@ -675,7 +718,7 @@ function V_quick(v){
       <div class="field"><label>单号/E-Invoice</label><input id="q_order" value="${esc(draft.orderNo||'')}" placeholder="无单号留空"></div>
       <div class="field"><label>支付方式</label><select id="q_pay">${opt(LIB.payMethods,draft.payMethod)}</select></div>
       <div class="field"><label>交易类型</label><select id="q_tx">${opt(LIB.txTypes,draft.txType)}</select></div>
-      <div class="field"><label>🔅成员</label><select id="q_member">${opt(LIB.members,draft.member)}</select></div>
+      <div class="field"><label>🔅成员</label><select id="q_member"><option value="👩我" ${draft.member&&draft.member!=='👩我'?'':'selected'}>👩我</option><optgroup label="使用人">${LIB.members.filter(m=>m!=='👩我').map(m=>`<option value="${esc(m)}" ${draft.member===m?'selected':''}>${esc(m)}</option>`).join('')}</optgroup></select></div>
       <div class="field" id="q_debtWrap" style="display:none"><label>关联债务（自动扣本金）</label>
         <select id="q_debt"><option value="">不关联</option>${S.debts.map(d=>`<option value="${d.id}">${esc(d.name)}（剩余 ${fmtRM(debtRemaining(d))}）</option>`).join('')}</select>
       </div>
@@ -784,6 +827,7 @@ function V_quick(v){
       payMethod:$('#q_pay').value,txType:$('#q_tx').value,member:$('#q_member').value,
       createdAt:Date.now()};
     S.records.push(rec); await dbPut('records',rec);
+    // 余额由账户期初+流水派生计算，无需在此改动
     // 保存小票图片到 IndexedDB(本地浏览器存储,不上传服务器)
     if(_pendingPhoto){
       try{
@@ -929,8 +973,10 @@ function V_records(v){
     });
     $$('#r_body [data-del]').forEach(b=>b.onclick=async()=>{
       if(!confirm('删除这条?(若有小票照片会一起删除)'))return;
-      const id=b.dataset.del; S.records=S.records.filter(r=>r.id!==id);
+      const id=b.dataset.del; const rec=S.records.find(r=>r.id===id);
+      S.records=S.records.filter(r=>r.id!==id);
       await dbDel('records',id);
+      // 余额派生计算，删除流水后自动重算，无需手动回滚
       try{ await dbDel('receipts',id); }catch(e){} // 同步删小票,释放 IndexedDB 空间
       refresh();
     });
@@ -979,6 +1025,7 @@ function V_records(v){
         member:$('#e_member').value, orderNo:$('#e_order').value.trim()
       });
       await dbPut('records',rec);
+      // 余额由账户期初+流水派生，保存后自动重算
       toast('已保存修改'); $('#modalClose').click(); refresh();
     };
     $('#e_cancel').onclick=()=>$('#modalClose').click();
@@ -1123,32 +1170,64 @@ function V_transfer(v){
     <div class="form-grid">
       <div class="field"><label>日期</label><input id="tf_date" type="date"></div>
       <div class="field"><label>金额</label><div class="amount-input-wrap"><span class="rm">RM</span><input id="tf_amount" inputmode="decimal"></div></div>
-      <div class="field"><label>转出账户</label><select id="tf_from">${S.accounts.map(a=>`<option value="${a.name}">${esc(a.name)}（${fmtRM(a.balance)}）</option>`).join('')}</select></div>
-      <div class="field"><label>转入账户</label><select id="tf_to">${S.accounts.map(a=>`<option value="${a.name}">${esc(a.name)}（${fmtRM(a.balance)}）</option>`).join('')}</select></div>
+      <div class="field"><label>转出账户</label><select id="tf_from"><option value="">无</option>${S.accounts.map(a=>{const b=balText(a.name);return `<option value="${a.name}">${esc(a.name)}（${b.neg?'⚠️ ':''}${b.text}）</option>`;}).join('')}</select></div>
+      <div class="field"><label>转入账户</label><select id="tf_to"><option value="">无</option>${S.accounts.map(a=>{const b=balText(a.name);return `<option value="${a.name}">${esc(a.name)}（${b.neg?'⚠️ ':''}${b.text}）</option>`;}).join('')}</select></div>
       <div class="field"><label>备注</label><input id="tf_note" placeholder="可选"></div>
     </div>
     <div class="row" style="margin-top:12px"><button class="primary-btn" id="tf_save">确认转账</button></div>
   </div>
   <div class="section-title">账户余额</div>
   <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">
-    ${S.accounts.map(a=>`<div class="card glass"><div class="label">${esc(a.name)}</div><div class="value">${fmtRM(a.balance)}</div></div>`).join('')}
+    ${S.accounts.map(a=>{const b=balText(a.name);return `<div class="card glass"><div class="label">${esc(a.name)}</div><div class="value ${b.neg?'bal-neg':''}">${b.neg?'⚠️ ':''}${b.text}</div></div>`;}).join('')}
   </div>`;
   const aInput=$('#tf_amount'); bindAmountInput(aInput);
   $('#tf_date').value=todayISO();
   $('#tf_save').onclick=async()=>{
     const from=$('#tf_from').value, to=$('#tf_to').value;
-    if(from===to){toast('转出/转入不能相同');return;}
+    if(from===''&&to===''){toast('请至少选择一个账户');return;}
+    if(from!==''&&from===to){toast('转出/转入不能相同');return;}
     const amt=aInput.getAmount(); if(!amt){toast('请输入金额');return;}
-    const fa=S.accounts.find(x=>x.name===from), ta=S.accounts.find(x=>x.name===to);
-    if(fa.balance<amt){if(!confirm('转出账户余额不足，是否继续？'))return;}
-    fa.balance-=amt; ta.balance+=amt;
-    await dbPut('accounts',fa); await dbPut('accounts',ta);
+    // 余额由账户期初+流水派生计算：转账记录(fromAccount/toAccount)自动联动，允许透支(负数)，不拦截
     const rec={id:uid(),date:isoToDmy($('#tf_date').value)||todayDMY(),type:'transfer',dir:'transfer',amount:amt,
-      category:'转账',note:$('#tf_note').value.trim(),fromAccount:from,toAccount:to,member:'',location:'',payMethod:'',txType:'',party:`${from} → ${to}`,createdAt:Date.now()};
+      category:'转账',note:$('#tf_note').value.trim(),fromAccount:from,toAccount:to,member:'',location:'',payMethod:'',txType:'',party:`${from||'无'} → ${to||'无'}`,createdAt:Date.now()};
     S.records.push(rec); await dbPut('records',rec);
-    toast(`已转 ${fmtRM(amt)}：${from} → ${to}`);
+    toast(`已处理 ${fmtRM(amt)}：${from||'无'} → ${to||'无'}`);
     V_transfer(v);
   };
+}
+
+/* ---------- 视图：账户期初余额 ---------- */
+function V_accounts(v){
+  v.innerHTML=`
+  <div class="warn-banner"><div class="icon">💡</div><div class="text">账户余额 = <b>期初余额 + 收入 − 支出 + 转账净值</b>。期初余额是开始用本 App 之前账户里已有的钱；没填则按 0 算。修改后立即在概览/转账页看到最新余额。</div></div>
+  <div class="card glass">
+    <div class="section-title">🏦 账户与期初余额</div>
+    <div class="table-wrap glass"><table>
+      <thead><tr><th>账户</th><th>期初余额 (RM)</th><th>当前余额（派生）</th><th>操作</th></tr></thead>
+      <tbody id="a_body"></tbody>
+    </table></div>
+    <p class="tiny muted" style="margin-top:8px">提示：「当前余额」= 期初 + 本 App 内的所有收入 − 支出 + 转账调整。新增账户请用「快速记账」时的支付方式或「转账」页对应账户名。</p>
+  </div>`;
+  function refresh(){
+    $('#a_body').innerHTML=S.accounts.map(a=>{
+      const cur=accountBalance(a.name);
+      return `<tr>
+        <td>${esc(a.name)}</td>
+        <td><div class="amount-input-wrap"><span class="rm">RM</span><input id="ao_${escAttr(a.id)}" inputmode="decimal" placeholder="0" value="${a.opening!=null&&a.opening!==''?esc(a.opening):''}"></div></td>
+        <td class="num ${cur<0?'bal-neg':''}">${fmtRM(cur)}</td>
+        <td><button class="primary-btn btn-sm" data-save="${escAttr(a.id)}">保存期初</button></td>
+      </tr>`;
+    }).join('')||'<tr><td colspan="4" class="empty">暂无账户</td></tr>';
+    $$('#a_body [data-save]').forEach(b=>b.onclick=async()=>{
+      const id=b.dataset.save; const acc=S.accounts.find(x=>x.id===id); if(!acc) return;
+      const inp=$(`#ao_${escAttr(id)}`);
+      const v=(inp.value||'').trim();
+      acc.opening = v==='' ? '' : (Number(v)||0);
+      await dbPut('accounts',acc); toast(`已保存「${acc.name}」期初余额`); refresh();
+    });
+  }
+  function escAttr(s){return String(s).replace(/"/g,'&quot;');}
+  refresh();
 }
 
 /* ---------- 视图：数据统计 ---------- */
@@ -1664,7 +1743,7 @@ $('#modalClose').onclick=()=>$('#modalRoot').classList.add('hidden');
 $('#modalRoot .modal-mask').onclick=()=>$('#modalRoot').classList.add('hidden');
 
 /* ---------- 路由表 ---------- */
-const VIEWS={overview:V_overview,quick:V_quick,records:V_records,debts:V_debts,transfer:V_transfer,stats:V_stats,budget:V_budget,calendar:V_calendar,parties:V_parties,data:V_data,settings:V_settings};
+const VIEWS={overview:V_overview,quick:V_quick,records:V_records,debts:V_debts,transfer:V_transfer,accounts:V_accounts,stats:V_stats,budget:V_budget,calendar:V_calendar,parties:V_parties,data:V_data,settings:V_settings};
 
 /* ---------- 启动 ---------- */
 async function boot(){
