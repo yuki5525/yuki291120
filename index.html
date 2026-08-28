@@ -28,8 +28,9 @@
   --radius:16px; --radius-sm:10px;
   --shadow:0 8px 30px rgba(0,0,0,0.45);
   --sidebar-w:168px;
-  /* 全站 chrome 统一底色：状态栏 / 顶栏 / 侧栏 / 底栏 一律用它，杜绝色差 */
-  --chrome:rgba(16,14,23,.96);
+  /* 全站 chrome 统一底色：状态栏 / 顶栏 / 侧栏 / 底栏 一律用它，杜绝色差。
+     改回黑底渐变（顶亮底暗，更立体），变量集中管理。 */
+  --chrome:linear-gradient(180deg, rgba(22,20,30,.97) 0%, rgba(10,9,15,.97) 100%);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;height:100%;overflow:hidden}
@@ -96,7 +97,7 @@ body{
 #sidebar .nav-foot .nav-item{width:auto; padding:9px 10px; font-size:12.5px}
 
 #content{flex:1; min-width:0; min-height:0; display:flex; flex-direction:column; min-height:0}
-#topbar{position:relative; flex:0 0 auto; z-index:20; display:flex; align-items:center; gap:12px; padding:12px 14px; background:var(--chrome); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border-bottom:1px solid var(--border)}
+#topbar{position:relative; flex:0 0 auto; z-index:20; display:flex; align-items:center; gap:12px; padding:12px 14px; background:var(--chrome); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border-bottom:1px solid rgba(124,58,237,.22); box-shadow:0 6px 18px rgba(0,0,0,.35), inset 0 -1px 0 rgba(255,255,255,.04)}
 #pageTitle{margin:0; font-size:17px; font-weight:700; flex:1; min-width:0}
 #menuToggle{display:block; flex:0 0 auto; width:38px; height:38px; padding:0; font-size:17px; line-height:1; display:flex; align-items:center; justify-content:center}
 .top-actions{display:flex; gap:8px; align-items:center; flex:0 0 auto}
@@ -236,11 +237,12 @@ input[type="date"]:focus{outline:none; border-color:var(--primary)}
 .bar > i{display:block; height:100%; background:linear-gradient(90deg,var(--primary),#a06bff)}
 .bar > i.over{background:linear-gradient(90deg,#ff5c5c,#ff8a8a)}
 
-/* ===== 底部导航（6 项，颜色与顶栏/状态栏/侧栏统一） ===== */
+/* ===== 底部导航（6 项，颜色与顶栏/状态栏/侧栏统一，加顶阴影与高光更立体） ===== */
 #bottomNav{
   display:flex; flex:0 0 auto; z-index:50;
   background:var(--chrome); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
-  border-top:1px solid var(--border);
+  border-top:1px solid rgba(124,58,237,.22);
+  box-shadow:0 -6px 18px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.04);
   justify-content:space-around; padding:6px 2px;
 }
 #bottomNav .nav-item{flex-direction:column; gap:2px; font-size:10px; padding:6px 4px; flex:1; justify-content:center; align-items:center}
