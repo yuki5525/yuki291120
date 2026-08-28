@@ -1,7 +1,9 @@
 /* Service Worker — 家庭记账 PWA
- * 缓存策略：app shell 与 CDN 依赖全部预缓存；同源 / CDN 命中缓存优先，回退网络。
+ * 缓存策略：
+ *   HTML 导航 → 网络优先（每次都拉最新版，根治"改了看不到"）；断网回落缓存
+ *   静态资源 / CDN → 缓存优先（离线可用、加载快）
  */
-const CACHE = 'fw-pwa-v24';
+const CACHE = 'fw-pwa-v25';
 const SHELL = [
   './',
   './index.html',
@@ -41,16 +43,39 @@ self.addEventListener('message', (e) => {
   if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
+/* 是否 HTML 导航请求 */
+const isHTML = (req) =>
+  req.mode === 'navigate' ||
+  (req.headers.get('accept') || '').indexOf('text/html') !== -1;
+
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
+
+  // ① HTML：网络优先（保证永不留旧壳）；断网才用缓存
+  if (isHTML(req)) {
+    e.respondWith(
+      fetch(req)
+        .then((resp) => {
+          if (resp && resp.ok) {
+            const clone = resp.clone();
+            caches.open(CACHE).then((c) => c.put('./index.html', clone));
+          }
+          return resp;
+        })
+        .catch(() => caches.match('./index.html'))
+    );
+    return;
+  }
+
+  // ② 静态资源 / CDN：缓存优先
   e.respondWith(
     caches.match(req).then((hit) => {
       if (hit) return hit;
       return fetch(req).then((resp) => {
         const u = new URL(req.url);
         const sameOrigin = u.origin === self.location.origin;
-        if (resp && (resp.ok || resp.type === 'opaque') && (sameOrigin || CDN.includes(req.url))) {
+        if (resp && (resp.ok || resp.type === 'opaque') && (sameOrigin || CDN.indexOf(req.url) !== -1)) {
           const clone = resp.clone();
           caches.open(CACHE).then((c) => c.put(req, clone));
         }

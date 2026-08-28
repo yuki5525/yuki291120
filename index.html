@@ -255,11 +255,6 @@ input[type="date"]:focus{outline:none; border-color:var(--primary)}
 #bottomNav .nav-item{flex-direction:column; gap:2px; font-size:10px; padding:6px 4px; flex:1; justify-content:center; align-items:center}
 #bottomNav .ic{font-size:18px}
 .toast{position:fixed; left:50%; bottom:84px; transform:translateX(-50%); z-index:300; background:rgba(20,18,28,.96); border:1px solid var(--border-strong); color:#fff; padding:11px 18px; border-radius:999px; font-size:13px; box-shadow:var(--shadow); animation:pop .25s}
-/* ===== 新版本提示条：SW 检测到新版时显示 ===== */
-#updateBanner{position:fixed; top:0; left:0; right:0; z-index:400; padding:10px 14px; display:flex; gap:10px; align-items:center; justify-content:center; background:linear-gradient(90deg, var(--primary), #5b2bb0); color:#fff; font-size:13px; box-shadow:0 4px 18px rgba(0,0,0,.45); animation:slideDown .3s}
-#updateBanner button{background:rgba(255,255,255,.22); border:1px solid rgba(255,255,255,.45); color:#fff; padding:7px 14px; border-radius:8px; cursor:pointer; font-size:12.5px; font-weight:600}
-#updateBanner button:hover{background:rgba(255,255,255,.32)}
-@keyframes slideDown{from{transform:translateY(-100%);opacity:0} to{transform:translateY(0);opacity:1}}
 @keyframes pop{from{opacity:0; transform:translate(-50%,10px)} to{opacity:1; transform:translate(-50%,0)}}
 .pill-row{display:flex; gap:8px; flex-wrap:wrap}
 .seg{display:inline-flex; border:1px solid var(--border); border-radius:999px; overflow:hidden}
@@ -396,12 +391,6 @@ input[type="date"]:focus{outline:none; border-color:var(--primary)}
     <button id="bioBtn" class="primary-btn block" style="display:none;margin-top:10px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);box-shadow:0 4px 14px rgba(59,130,246,.35)">👆 指纹快捷解锁</button>
     <p class="tiny muted">首次使用请到「设置」中设置密码；默认密码 0000</p>
   </div>
-</div>
-
-<!-- 新版本提示：SW 检测到新版时由 JS 解除 hidden -->
-<div id="updateBanner" hidden>
-  🆕 新版本已就绪，体验改进已上线
-  <button id="updateBtn">立即刷新</button>
 </div>
 
 <!-- 第三方依赖（Service Worker 离线缓存） -->
@@ -1970,32 +1959,27 @@ async function tryUnlock(){
   }
 }
 
-/* ---------- PWA 注册 & 安装提示 & 新版本提示 ---------- */
+/* ---------- PWA 注册 & 安装提示（无横幅，靠 SW 网络优先自动更新）---------- */
+/* 说明：不再显示任何更新横幅。更新策略改为——
+   ① sw.js 对 HTML 导航请求走「网络优先」，每次打开都拉最新 index.html；
+   ② SW install 里 skipWaiting + activate 里 clients.claim，新 SW 立即接管；
+   ③ controllerchange 触发一次静默 reload（防重复）。
+   用户无感即可拿到新版本。 */
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     navigator.serviceWorker.register('sw.js').then(reg=>{
-      // 检测到 waiting worker（新版 SW 已下载但未激活）→ 弹更新条
-      const show=()=>{ const b=document.getElementById('updateBanner'); if(b) b.hidden=false; };
-      if(reg.waiting && reg.waiting.state==='installed') show();
-      reg.addEventListener('updatefound',()=>{
-        const nw=reg.installing;
-        nw && nw.addEventListener('statechange',()=>{
-          if(nw.state==='installed' && navigator.serviceWorker.controller) show();
-        });
+      let _reloading=false;
+      navigator.serviceWorker.addEventListener('controllerchange',()=>{
+        if(_reloading) return; _reloading=true; location.reload();
       });
-      // 切页时再查一次（首次安装 controller 为 null，要等二次进入）
-      navigator.serviceWorker.addEventListener('controllerchange',()=>location.reload());
+      // 后台静默检查更新（不做任何 UI 提示）
+      setInterval(()=>{ try{ reg.update(); }catch(e){} }, 30000);
     }).catch(()=>{});
   });
-  // 提供给 banner 按钮调用：让 waiting SW 立即激活
-  navigator.serviceWorker.addEventListener('message',e=>{ /* no-op */ });
-  window.__skipWaiting=()=>{ navigator.serviceWorker.getRegistration().then(r=>{ if(r && r.waiting) r.waiting.postMessage({type:'SKIP_WAITING'}); }); };
 }
 let _deferred=null;
 window.addEventListener('beforeinstallprompt',(e)=>{ e.preventDefault(); _deferred=e; const b=document.getElementById('installBtn'); if(b) b.hidden=false; });
 document.addEventListener('click',(e)=>{ if(e.target && e.target.id==='installBtn' && _deferred){ _deferred.prompt(); _deferred=null; e.target.hidden=true; } });
-// 更新条按钮：触发 skipWaiting → 页面自动 reload
-document.addEventListener('click',(e)=>{ if(e.target && e.target.id==='updateBtn'){ window.__skipWaiting && window.__skipWaiting(); } });
 
 boot();
 </script>
