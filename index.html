@@ -394,9 +394,9 @@ const LIB = {
   items:       ['饮料🥤','白咖啡冰☕️','面包🍞','点心🥧','炒饭🍛','鸡饭🍛','粿条汤🍜','云吞面🍜','爪哇面🍜','经济饭🍛','炒粿条🍝','福建面 🍜','拌面 🍜','板面 🍜','意大利面🍝','韩式饭/面','汉堡🍔','卤肉🧆','零食🍬','冰淇淋🍦','NUGGET🥓','炸鸡🍗','PIZZA🍕','面包🍞','薯条🍟','寿司🍣','华夫饼🧇','Mc DONAL🍟','KFC🍖','LAKSA🍲','NASI LEMAK🍚','蛋糕🍰','文具✏️','衣裤鞋袜👗','内衣裤👙','蔬菜🥬','鸡肉🐔','猪肉🐷','海鲜🐟🦐🦀','零件⚙️','五金件🔩','满煎糕🥐','塔可TACO🌮','生计用品🔞','糕点🥐','炸糕🥐','卫生棉💧','卫生纸🧻','鱼粮🐟','狗粮🐈🐕','干粮🍪'],
   members:     ['👩我','🙎‍♂️老公','👧Queency','👧Gabby','👦Ambrose','👩🏻‍🦰俩女儿','👩‍👧‍👦母女仨','家婆','妹妹','爸爸','妈妈','叔叔','朋友','其他'],
   locations:   ['28间','二街','长城咖啡店','77咖啡店','百福叻沙','家园咖啡店','中兴咖啡店','国记点心','十全十美美食广场','银火饮食中心','鸿运咖啡店','88咖啡店','大年咖啡店','45菜市场','LOTUS','ECONSAVE','ECONO JAYA','HASANI BOOK','ECO','MR DIY','EASY HOME','UTC巴刹','老街场','UTC','MIXUE蜜雪','TAMAN KELADI','TAMAN INTAN','鱼店','River Front','其他'],
-  payMethods:  ['现金','电子钱包','PayLater','Tng Ewallet','Ryt Bank','Ryt PayLater','RHB Bank','GX Bank','Boost','Grab Pay','Shopee Pay','支付宝','微信','其他'],
+  payMethods:  ['现金','电子钱包','Ryt Bank','Ryt PayLater','GX Bank','GX PayLater','Boost','Boost PayLater','Grab Pay','Grab PayLater','Shopee Pay','Shopee PayLater','RHB Bank','Tng Ewallet','支付宝','微信','其他','PayLater'],
   txTypes:     ['CASH','DEBIT CARD','DUITNOW TRANSFER','QR SCAN TRANSFER'],
-  accounts:    ['现金','RHB Bank','Ryt Bank','GX Bank','电子钱包','PayLater'],
+  accounts:    ['现金','RHB Bank','Ryt Bank','GX Bank','电子钱包','Ryt PayLater','GX PayLater','Boost PayLater','Grab PayLater','Shopee PayLater'],
 };
 
 /* ---------- 工具 ---------- */
@@ -509,8 +509,30 @@ function accountBalance(name){
 }
 function totalAssets(){
   let t=0;
-  for(const a of S.accounts) t+=accountBalance(a.name);
+  for(const a of S.accounts){ if(isCreditAcc(a)) continue; t+=accountBalance(a.name); } // 信用额度非自有资产，不计入总资产
   return Math.round(t*100)/100;
+}
+// 信用账户（如 Ryt PayLater）：额度可循环，按「已用/可用」口径展示
+function isCreditAcc(a){ return !!(a && /paylater/i.test(a.name||'')); }
+function creditInfo(name){
+  const acc=S.accounts.find(a=>a.name===name); if(!acc) return {limit:0,owed:0,available:0,opening:0,unset:true};
+  const opening=Number(acc.opening)||0;
+  let exp=0,inc=0,tfIn=0,tfOut=0;
+  for(const r of S.records){
+    if(r.type==='transfer'){ if(r.toAccount===name) tfIn+=Number(r.amount)||0; if(r.fromAccount===name) tfOut+=Number(r.amount)||0; }
+    else if(r.payMethod===name){ if(r.type==='income') inc+=Number(r.amount)||0; else if(r.type==='expense') exp+=Number(r.amount)||0; }
+  }
+  const owed=Math.max(0, opening+exp-inc+tfOut-tfIn); // 已用额度（欠款）
+  const hasLimit = acc.limit!=null && acc.limit!=='' && Number(acc.limit)>0;
+  const limit=hasLimit?Number(acc.limit):0;
+  const available= hasLimit?Math.max(0,limit-owed):null; // 额度未设时可用未知
+  return {limit,owed,available,opening,unset:!hasLimit};
+}
+// 下拉/列表中账户余额的简短标签（信用账户显示可用额度）
+function accBalLabel(name){
+  const a=S.accounts.find(x=>x.name===name);
+  if(isCreditAcc(a)){ const c=creditInfo(name); return c.unset?'额度未设':`可用 ${fmtRM(c.available)}`; }
+  const b=balText(name); return (b.neg?'⚠️ ':'')+b.text;
 }
 // 余额展示：<0 红字+⚠️；期初未设 → 小角标提示
 function balText(name){
@@ -529,7 +551,9 @@ async function loadAll(){
   S.budgets=await dbAll('budgets');
   S.parties=await dbAll('parties');
   if(S.accounts.length===0){
-    S.accounts=LIB.accounts.map(a=>({id:uid(),name:a})); // opening 留空 → 派生余额按 0 起算
+    S.accounts=LIB.accounts.map(a=> a==='Ryt PayLater'
+      ? {id:uid(),name:a,credit:true,limit:500,opening:0}
+      : {id:uid(),name:a}); // opening 留空 → 派生余额按 0 起算
     for(const a of S.accounts)await dbPut('accounts',a);
   }
   // 兼容旧数据：把上一版存的 account.balance 迁移为 opening
@@ -538,15 +562,27 @@ async function loadAll(){
       a.opening=a.balance; delete a.balance; await dbPut('accounts',a);
     }
   }
-  // 兼容旧数据：补齐 Ryt Bank / GX Bank / PayLater
-  for(const name of ['Ryt Bank','GX Bank','PayLater']){
+  // 兼容旧数据：补齐 Ryt Bank / GX Bank；Ryt PayLater 优先复用旧「PayLater」账户（信用额度 500）
+  for(const name of ['Ryt Bank','GX Bank']){
     if(!S.accounts.find(a=>a.name===name)){const a={id:uid(),name};S.accounts.push(a);await dbPut('accounts',a);}
   }
-  // 首次使用：种入示例 PayLater 债务，便于演示联动
-  if(S.debts.length===0){
-    const d={id:uid(),name:'Ryt PayLater',totalAmount:500,periods:0,weeklyPayment:0,monthlyPayment:0,
-      paidPeriods:0,overduePeriods:0,paidAmount:0,startDate:todayDMY(),endDate:'',payMethod:'Ryt PayLater',status:'正常还款'};
-    S.debts.push(d);await dbPut('debts',d);
+  if(!S.accounts.find(a=>a.name==='Ryt PayLater')){
+    const oldPL=S.accounts.find(a=>a.name==='PayLater');
+    if(oldPL){ oldPL.name='Ryt PayLater'; oldPL.credit=true; oldPL.limit=oldPL.limit||500; if(oldPL.opening==null||oldPL.opening==='') oldPL.opening=0; await dbPut('accounts',oldPL); }
+    else { const a={id:uid(),name:'Ryt PayLater',credit:true,limit:500,opening:0}; S.accounts.push(a); await dbPut('accounts',a); }
+  }
+  // Ryt PayLater 不再是债务：清掉旧版种入的 Ryt PayLater 债务记录（改走信用账户）
+  const plDebt=S.debts.find(d=>/^ryt paylater$/i.test(d.name||''));
+  if(plDebt){ S.debts=S.debts.filter(d=>d!==plDebt); try{await dbDel('debts',plDebt.id);}catch(e){} }
+  // 所有带 PayLater 的支付方式 → 信用账户（循环额度）。仅 Ryt PayLater 有真实额度 500，其余「未设」，用户后期在账户期初自行填写
+  for(const pm of LIB.payMethods){
+    if(/paylater/i.test(pm) && !S.accounts.find(a=>a.name===pm)){
+      const a={id:uid(),name:pm,credit:true,limit:(pm==='Ryt PayLater'?500:''),opening:0}; S.accounts.push(a); await dbPut('accounts',a);
+    }
+  }
+  // 兼容旧数据：上一版给所有 PayLater 默认填了 500，复位为非 Ryt 的「未设」（仅 Ryt PayLater 保留 500）
+  for(const a of S.accounts){
+    if(isCreditAcc(a) && a.name!=='Ryt PayLater' && Number(a.limit)===500){ a.limit=''; await dbPut('accounts',a); }
   }
   S.ready=true;
 }
@@ -627,7 +663,17 @@ function V_overview(v){
   </div>
   <div class="section-title">💳 账户余额</div>
   <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">
-    ${S.accounts.map(a=>{const b=balText(a.name);return `<div class="card glass"><div class="label">${esc(a.name)}</div><div class="value ${b.neg?'bal-neg':''}">${b.neg?'⚠️ ':''}${b.text}</div></div>`;}).join('')}
+    ${S.accounts.map(a=>{
+      if(isCreditAcc(a)){
+        const c=creditInfo(a.name);
+        if(c.unset){
+          return `<div class="card glass"><div class="label">${esc(a.name)} <span class="badge">信用</span></div><div class="value">额度未设</div><div class="sub">已用 ${fmtRM(c.owed)} · 去「账户期初」填额度</div></div>`;
+        }
+        return `<div class="card glass"><div class="label">${esc(a.name)} <span class="badge">信用</span></div><div class="value">${fmtRM(c.available)}</div><div class="sub">可用额度 · 已用 ${fmtRM(c.owed)} / 额度 ${fmtRM(c.limit)}</div></div>`;
+      }
+      const b=balText(a.name);
+      return `<div class="card glass"><div class="label">${esc(a.name)}</div><div class="value ${b.neg?'bal-neg':''}">${b.neg?'⚠️ ':''}${b.text}</div></div>`;
+    }).join('')}
   </div>
 
   <div class="section-title">📈 收支概览</div>
@@ -639,7 +685,7 @@ function V_overview(v){
     <div class="card glass"><div class="label">📆 本月收入</div><div class="value income">${fmtRM(moInc)}</div><div class="sub">${mo.start.slice(0,7)}</div></div>
     <div class="card glass"><div class="label">📆 本月支出</div><div class="value expense">${fmtRM(moExp)}</div><div class="sub">本月结余 ${fmtRM(moInc-moExp)}</div></div>
     <div class="card glass"><div class="label">💰 实时总结余</div><div class="value ${balance>=0?'':'warn'}">${fmtRM(balance)}</div><div class="sub">累计收入-累计支出</div></div>
-    <div class="card glass" id="plCard"><div class="label">📑 小资贷款·待还</div><div class="value warn" id="plVal">${fmtRM(plTotal)}</div><div class="sub">含 PayLater 联动债务</div></div>
+    ${plTotal>0?`<div class="card glass" id="plCard"><div class="label">📑 小资贷款·待还</div><div class="value warn" id="plVal">${fmtRM(plTotal)}</div><div class="sub">PayLater 联动债务</div></div>`:''}
   </div>
 
   <div class="section-title">⚡ 快捷操作</div>
@@ -985,6 +1031,7 @@ function V_records(v){
   // —— 修改流水：弹窗编辑后写回 IndexedDB ——
   function editRecord(id){
     const rec=S.records.find(r=>r.id===id); if(!rec) return;
+    let _editPhoto=null, _editPhotoDel=false;
     const isTransfer=rec.type==='transfer';
     const typeOpts=`<option value="income" ${rec.type==='income'?'selected':''}>收入</option><option value="expense" ${rec.type==='expense'?'selected':''}>支出</option><option value="transfer" ${rec.type==='transfer'?'selected':''}>转账</option>`;
     const catOpts=(rec.type==='income'?LIB.incomeCats:LIB.expenseCats);
@@ -1002,12 +1049,32 @@ function V_records(v){
         <div class="field"><label>交易类型</label><select id="e_tx">${opt(LIB.txTypes,rec.txType)}</select></div>
         <div class="field"><label>🔅成员</label><select id="e_member">${opt(LIB.members,rec.member)}</select></div>
         <div class="field"><label>单号/E-Invoice</label><input id="e_order" value="${esc(rec.orderNo||'')}"></div>
+        <div class="field" style="grid-column:1/-1"><label>📷 小票照片</label>
+          <div id="e_photoBox" class="photo-box"></div>
+          <input type="file" id="e_file" accept="image/*" style="margin-top:6px">
+          <button type="button" class="ghost-btn btn-sm" id="e_delPhoto" style="margin-top:6px;display:none">🗑 删除照片</button>
+        </div>
       </div>
       ${isTransfer?'<p class="tiny muted" style="margin:6px 0 0">⚠️ 转账记录：此处修改金额/账户不会自动重算双方余额，如需调整余额请到「转账」页重做。</p>':''}
       <div class="row" style="margin-top:12px"><button class="primary-btn" id="e_save">保存修改</button><button class="ghost-btn" id="e_cancel">取消</button></div>
     </div>`;
     showModal('✏️ 修改流水', html);
     const eAmt=$('#e_amount'); bindAmountInput(eAmt); eAmt.setAmount(rec.amount||0);
+    const photoBox=$('#e_photoBox');
+    const renderPhoto=(url)=>{ photoBox.innerHTML=`<img src="${url}" style="max-width:100%;max-height:240px;border-radius:8px;border:1px solid var(--border)">`; $('#e_delPhoto').style.display='inline-block'; };
+    (async()=>{ try{ const db=await openDB(); const t=db.transaction('receipts','readonly').objectStore('receipts').get(rec.id); t.onsuccess=()=>{ const r=t.result; if(r&&r.blob){ const u=URL.createObjectURL(r.blob); photoBox.dataset.url=u; renderPhoto(u); } else { photoBox.innerHTML='<span class="muted tiny">暂无照片</span>'; } }; t.onerror=()=>{ photoBox.innerHTML='<span class="muted tiny">暂无照片</span>'; }; }catch(e){ photoBox.innerHTML='<span class="muted tiny">暂无照片</span>'; } })();
+    $('#e_file').onchange=e=>{
+      const f=e.target.files&&e.target.files[0]; if(!f) return;
+      _editPhotoDel=false; _editPhoto=f;
+      if(photoBox.dataset.url) URL.revokeObjectURL(photoBox.dataset.url);
+      const u=URL.createObjectURL(f); photoBox.dataset.url=u; renderPhoto(u);
+    };
+    $('#e_delPhoto').onclick=()=>{
+      _editPhotoDel=true; _editPhoto=null;
+      if(photoBox.dataset.url){ URL.revokeObjectURL(photoBox.dataset.url); photoBox.dataset.url=''; }
+      photoBox.innerHTML='<span class="muted tiny">暂无照片</span>';
+      $('#e_delPhoto').style.display='none';
+    };
     $('#e_type').onchange=()=>{
       const t=$('#e_type').value;
       const co=(t==='income'?LIB.incomeCats:LIB.expenseCats);
@@ -1025,6 +1092,9 @@ function V_records(v){
         member:$('#e_member').value, orderNo:$('#e_order').value.trim()
       });
       await dbPut('records',rec);
+      // 小票照片：删除标记 → 删记录；选了新图 → 覆盖；否则保持原样
+      if(_editPhotoDel){ try{ await dbDel('receipts', rec.id); }catch(e){} }
+      else if(_editPhoto){ await dbPut('receipts',{recordId:rec.id, blob:_editPhoto, type:_editPhoto.type||'image/jpeg', createdAt:Date.now()}); }
       // 余额由账户期初+流水派生，保存后自动重算
       toast('已保存修改'); $('#modalClose').click(); refresh();
     };
@@ -1170,8 +1240,8 @@ function V_transfer(v){
     <div class="form-grid">
       <div class="field"><label>日期</label><input id="tf_date" type="date"></div>
       <div class="field"><label>金额</label><div class="amount-input-wrap"><span class="rm">RM</span><input id="tf_amount" inputmode="decimal"></div></div>
-      <div class="field"><label>转出账户</label><select id="tf_from"><option value="">无</option>${S.accounts.map(a=>{const b=balText(a.name);return `<option value="${a.name}">${esc(a.name)}（${b.neg?'⚠️ ':''}${b.text}）</option>`;}).join('')}</select></div>
-      <div class="field"><label>转入账户</label><select id="tf_to"><option value="">无</option>${S.accounts.map(a=>{const b=balText(a.name);return `<option value="${a.name}">${esc(a.name)}（${b.neg?'⚠️ ':''}${b.text}）</option>`;}).join('')}</select></div>
+      <div class="field"><label>转出账户</label><select id="tf_from"><option value="">无</option>${S.accounts.map(a=>`<option value="${a.name}">${esc(a.name)}（${accBalLabel(a.name)}）</option>`).join('')}</select></div>
+      <div class="field"><label>转入账户</label><select id="tf_to"><option value="">无</option>${S.accounts.map(a=>`<option value="${a.name}">${esc(a.name)}（${accBalLabel(a.name)}）</option>`).join('')}</select></div>
       <div class="field"><label>备注</label><input id="tf_note" placeholder="可选"></div>
     </div>
     <div class="row" style="margin-top:12px"><button class="primary-btn" id="tf_save">确认转账</button></div>
@@ -1199,17 +1269,29 @@ function V_transfer(v){
 /* ---------- 视图：账户期初余额 ---------- */
 function V_accounts(v){
   v.innerHTML=`
-  <div class="warn-banner"><div class="icon">💡</div><div class="text">账户余额 = <b>期初余额 + 收入 − 支出 + 转账净值</b>。期初余额是开始用本 App 之前账户里已有的钱；没填则按 0 算。修改后立即在概览/转账页看到最新余额。</div></div>
+  <div class="warn-banner"><div class="icon">💡</div><div class="text">账户余额 = <b>期初余额 + 收入 − 支出 + 转账净值</b>。信用账户（💳）按 <b>已用 = 初始已用 + 消费 − 还款</b> 计算，<b>可用额度 = 额度 − 已用</b>（额度循环，还款后自动恢复）。</div></div>
   <div class="card glass">
-    <div class="section-title">🏦 账户与期初余额</div>
+    <div class="section-title">🏦 账户与期初 / 信用额度</div>
     <div class="table-wrap glass"><table>
-      <thead><tr><th>账户</th><th>期初余额 (RM)</th><th>当前余额（派生）</th><th>操作</th></tr></thead>
+      <thead><tr><th>账户</th><th>期初 / 信用额度 (RM)</th><th>当前（已用 / 可用）</th><th>操作</th></tr></thead>
       <tbody id="a_body"></tbody>
     </table></div>
-    <p class="tiny muted" style="margin-top:8px">提示：「当前余额」= 期初 + 本 App 内的所有收入 − 支出 + 转账调整。新增账户请用「快速记账」时的支付方式或「转账」页对应账户名。</p>
+    <p class="tiny muted" style="margin-top:8px">提示：普通账户填「期初余额」；信用账户填「信用额度」与「初始已用」。新增账户请用「快速记账」时的支付方式或「转账」页对应账户名。</p>
   </div>`;
   function refresh(){
     $('#a_body').innerHTML=S.accounts.map(a=>{
+      if(isCreditAcc(a)){
+        const c=creditInfo(a.name);
+        return `<tr>
+          <td>${esc(a.name)} <span class="badge">信用</span></td>
+          <td>
+            <div class="amount-input-wrap" style="margin-bottom:4px"><span class="rm">额度</span><input id="al_${escAttr(a.id)}" inputmode="decimal" placeholder="500" value="${a.limit!=null&&a.limit!==''?esc(a.limit):'500'}"></div>
+            <div class="amount-input-wrap"><span class="rm">已用</span><input id="ao_${escAttr(a.id)}" inputmode="decimal" placeholder="0" value="${a.opening!=null&&a.opening!==''?esc(a.opening):'0'}"></div>
+          </td>
+          <td class="num">已用 ${fmtRM(c.owed)}<br>可用 <b>${c.available!=null?fmtRM(c.available):'—'}</b><br><span class="sub">额度 ${c.unset?'未设':fmtRM(c.limit)}</span></td>
+          <td><button class="primary-btn btn-sm" data-save="${escAttr(a.id)}">保存</button></td>
+        </tr>`;
+      }
       const cur=accountBalance(a.name);
       return `<tr>
         <td>${esc(a.name)}</td>
@@ -1220,10 +1302,16 @@ function V_accounts(v){
     }).join('')||'<tr><td colspan="4" class="empty">暂无账户</td></tr>';
     $$('#a_body [data-save]').forEach(b=>b.onclick=async()=>{
       const id=b.dataset.save; const acc=S.accounts.find(x=>x.id===id); if(!acc) return;
-      const inp=$(`#ao_${escAttr(id)}`);
-      const v=(inp.value||'').trim();
-      acc.opening = v==='' ? '' : (Number(v)||0);
-      await dbPut('accounts',acc); toast(`已保存「${acc.name}」期初余额`); refresh();
+      const oinp=$(`#ao_${escAttr(id)}`); const ov=(oinp.value||'').trim();
+      if(isCreditAcc(acc)){
+        acc.opening = ov==='' ? 0 : (Number(ov)||0);
+        const linp=$(`#al_${escAttr(id)}`); const lv=(linp.value||'').trim();
+        acc.limit = lv==='' ? '' : (Number(lv)||0);
+        await dbPut('accounts',acc); toast(`已保存「${acc.name}」信用额度 ${fmtRM(acc.limit)}`); refresh();
+      } else {
+        acc.opening = ov==='' ? '' : (Number(ov)||0);
+        await dbPut('accounts',acc); toast(`已保存「${acc.name}」期初余额`); refresh();
+      }
     });
   }
   function escAttr(s){return String(s).replace(/"/g,'&quot;');}
@@ -1264,7 +1352,7 @@ function V_stats(v){
     const pm=r.payMethod||'';
     if(pm==='现金'){groups['现金'][r.dir==='in'?'i':'e']+=r.amount;}
     else if(pm==='RHB Bank'){groups['银行'][r.dir==='in'?'i':'e']+=r.amount;}
-    else if(/paylater/i.test(pm)){groups['小资贷款'].e+=r.amount;} // PayLater 一般是支出
+    else if(/paylater/i.test(pm)){ /* 所有 PayLater 已是信用账户,统一在「账户余额」展示,不计入小资贷款现金流 */ }
     else if(['Tng Ewallet','Ryt Bank','GX Bank','Boost','Grab Pay','Shopee Pay','支付宝','微信','其他'].includes(pm)){groups['电子钱包'][r.dir==='in'?'i':'e']+=r.amount;}
   });
   // 小资贷款剩余待还本金（来自债务）
@@ -1276,7 +1364,7 @@ function V_stats(v){
   v.innerHTML=`
   <div class="section-title">💳 支付方式现金流（联动小资贷款）</div>
   <div class="cards">
-    ${['现金','银行','小资贷款','电子钱包'].map(k=>{
+    ${['现金','银行','电子钱包'].concat(plRemain>0?['小资贷款']:[]).map(k=>{
       const g=groups[k];
       const net=k==='小资贷款'?-plRemain:(g.i-g.e);
       return `<div class="card glass">
