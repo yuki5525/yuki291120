@@ -183,7 +183,10 @@ input[type="date"]:focus{outline:none; border-color:var(--primary)}
 .date-info .lunar{color:#ffd28a}
 
 /* ===== 记账明细：筛选/导出栏常驻顶部（不被列表滚走） ===== */
-.r-filterbar{position:sticky; top:84px; z-index:15; margin-bottom:14px;
+/* 注意：#topbar 是 #view 的 flex 兄弟，不覆盖内容；滚动容器就是 #view 本身，
+   所以这里 top 必须是 0（旧的 84px 是"整页滚动 + 顶栏浮层"时代的遗留值，
+   会让筛选栏悬在页面中间永远吸不到顶）。与 th{position:sticky;top:0} 保持一致。 */
+.r-filterbar{position:sticky; top:0; z-index:15; margin-bottom:14px;
   background:var(--chrome); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
   border:1px solid var(--border); box-shadow:0 6px 18px rgba(0,0,0,.35)}
 
@@ -587,6 +590,18 @@ function balText(name){
   return {text:fmtRM(b), neg:b<0, unset};
 }
 
+/* 账户的展示顺序：置顶账户（现金）排最前，其余保持原有相对顺序（稳定排序）。
+   只影响展示，不改动 S.accounts 本身，也不改变 IndexedDB 里的存储顺序。
+   想再调顺序，往 ACCT_PINNED 里按顺序加账户名即可，越靠前优先级越高。 */
+const ACCT_PINNED=['现金'];
+function sortedAccounts(){
+  const rank=a=>{ const i=ACCT_PINNED.indexOf(a?.name); return i<0?ACCT_PINNED.length:i; };
+  return S.accounts
+    .map((a,i)=>({a,i}))                                   // 带上原索引
+    .sort((x,y)=> (rank(x.a)-rank(y.a)) || (x.i-y.i))      // 先按置顶优先级，再按原顺序（稳定）
+    .map(o=>o.a);
+}
+
 /* ---------- 状态 ---------- */
 const S={records:[],debts:[],accounts:[],budgets:[],parties:[],ready:false};
 async function loadAll(){
@@ -715,7 +730,7 @@ function V_overview(v){
   </div>
   <div class="section-title">💳 账户余额</div>
   <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">
-    ${S.accounts.map(a=>{
+    ${sortedAccounts().map(a=>{
       if(isCreditAcc(a)){
         const c=creditInfo(a.name);
         if(c.unset && c.owed<=0) return ''; // 额度未设且无使用记录 → 概览不展示
@@ -984,14 +999,21 @@ function V_records(v){
     const ex=rs.filter(r=>r.dir==='out').reduce((a,r)=>a+r.amount,0);
     return {label,bad,i,ex,bal:i-ex};
   });
+  /* 筛选面板默认「收起」：只有明确存过 '0' 才展开；新用户/未设置一律收起。
+     写入端（r_toggle）保持不变：展开写 '0'、收起写 '1'，与此处判断自洽。 */
+  const rCollapsed = localStorage.getItem('fw_records_collapsed') !== '0';
+  /* 收起时也要能看出当前范围，所以自定义区间直接显示起止日期 */
+  const rRangeText = draft.preset==='custom'
+    ? (draft.start&&draft.end ? `${draft.start} → ${draft.end}` : '自定义')
+    : (draft.preset||'全部记录');
   v.innerHTML=`
   <div class="card glass r-filterbar" id="r_filterbar">
     <div class="section-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <span>🔍 筛选 & 导出</span>
-      <span class="filter-tag">${draft.preset==='custom'?'自定义':(draft.preset||'全部记录')}</span>
-      <button class="ghost-btn btn-sm" id="r_toggle" style="margin-left:auto">${localStorage.getItem('fw_records_collapsed')==='1'?'展开 ▾':'收起 ▴'}</button>
+      <span class="filter-tag">${esc(rRangeText)}</span>
+      <button class="ghost-btn btn-sm" id="r_toggle" style="margin-left:auto">${rCollapsed?'展开 ▾':'收起 ▴'}</button>
     </div>
-    <div id="r_panel" style="${localStorage.getItem('fw_records_collapsed')==='1'?'display:none':''}">
+    <div id="r_panel" style="${rCollapsed?'display:none':''}">
     <p class="tiny muted" style="margin:4px 0 12px">💡 调整下方筛选条件后，明细表 + 概览/统计页的 KPI 与图表会全部按新范围重算。导出范围可选「当前筛选」或「全部记录」。</p>
     <div class="seg" id="r_preset">
       <button data-p="today">今天</button>
@@ -1186,13 +1208,14 @@ function V_records(v){
   $$('#r_preset button').forEach(x=>x.classList.toggle('active',x.dataset.p===currentPreset));
 
   // —— 筛选/导出面板 折叠收起 ——
+  // 存储语义：'0' = 展开，'1' = 收起，未设置 = 收起（默认收起，见上方 rCollapsed）
   const rToggle=$('#r_toggle'), rPanel=$('#r_panel');
   if(rToggle && rPanel){
     rToggle.onclick=()=>{
-      const collapsed=rPanel.style.display==='none';
-      rPanel.style.display=collapsed?'':'none';
-      rToggle.textContent=collapsed?'收起 ▴':'展开 ▾';
-      localStorage.setItem('fw_records_collapsed',collapsed?'0':'1');
+      const wasCollapsed=rPanel.style.display==='none';   // 点击「前」的状态
+      rPanel.style.display=wasCollapsed?'':'none';
+      rToggle.textContent=wasCollapsed?'收起 ▴':'展开 ▾';
+      localStorage.setItem('fw_records_collapsed',wasCollapsed?'0':'1');
     };
   }
 
@@ -1293,15 +1316,15 @@ function V_transfer(v){
     <div class="form-grid">
       <div class="field"><label>日期</label><input id="tf_date" type="date"></div>
       <div class="field"><label>金额</label><div class="amount-input-wrap"><span class="rm">RM</span><input id="tf_amount" inputmode="decimal"></div></div>
-      <div class="field"><label>转出账户</label><select id="tf_from"><option value="">无</option>${S.accounts.map(a=>`<option value="${a.name}">${esc(a.name)}（${accBalLabel(a.name)}）</option>`).join('')}</select></div>
-      <div class="field"><label>转入账户</label><select id="tf_to"><option value="">无</option>${S.accounts.map(a=>`<option value="${a.name}">${esc(a.name)}（${accBalLabel(a.name)}）</option>`).join('')}</select></div>
+      <div class="field"><label>转出账户</label><select id="tf_from"><option value="">无</option>${sortedAccounts().map(a=>`<option value="${a.name}">${esc(a.name)}（${accBalLabel(a.name)}）</option>`).join('')}</select></div>
+      <div class="field"><label>转入账户</label><select id="tf_to"><option value="">无</option>${sortedAccounts().map(a=>`<option value="${a.name}">${esc(a.name)}（${accBalLabel(a.name)}）</option>`).join('')}</select></div>
       <div class="field"><label>备注</label><input id="tf_note" placeholder="可选"></div>
     </div>
     <div class="row" style="margin-top:12px"><button class="primary-btn" id="tf_save">确认转账</button></div>
   </div>
   <div class="section-title">账户余额</div>
   <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">
-    ${S.accounts.map(a=>{const b=balText(a.name);return `<div class="card glass"><div class="label">${esc(a.name)}</div><div class="value ${b.neg?'bal-neg':''}">${b.neg?'⚠️ ':''}${b.text}</div></div>`;}).join('')}
+    ${sortedAccounts().map(a=>{const b=balText(a.name);return `<div class="card glass"><div class="label">${esc(a.name)}</div><div class="value ${b.neg?'bal-neg':''}">${b.neg?'⚠️ ':''}${b.text}</div></div>`;}).join('')}
   </div>`;
   const aInput=$('#tf_amount'); bindAmountInput(aInput);
   $('#tf_date').value=todayISO();
@@ -1332,7 +1355,7 @@ function V_accounts(v){
     <p class="tiny muted" style="margin-top:8px">提示：普通账户填「期初余额」；信用账户填「信用额度」与「初始已用」。新增账户请用「快速记账」时的支付方式或「转账」页对应账户名。</p>
   </div>`;
   function refresh(){
-    $('#a_body').innerHTML=S.accounts.map(a=>{
+    $('#a_body').innerHTML=sortedAccounts().map(a=>{
       if(isCreditAcc(a)){
         const c=creditInfo(a.name);
         return `<tr>
@@ -1687,7 +1710,7 @@ function V_data(v){
     const rows=_currentFilterArr();
     XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.map(r=>({日期:r.date,类型:r.type,金额:r.amount,分类:r.category,物品:r.item||'',备注:r.note,地点:r.location,单号:r.orderNo,支付方式:r.payMethod,交易类型:r.txType,成员:r.member,往来对象:r.party||''}))),'记账明细');
     XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(S.debts.map(d=>({名称:d.name,总金额:d.totalAmount,已还:d.paidAmount,剩余:debtRemaining(d),每星期:d.weeklyPayment,每月:d.monthlyPayment,起:d.startDate,止:d.endDate,支付:d.payMethod,状态:d.status}))),'债务台账');
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(S.accounts.map(a=>({账户:a.name,余额:a.balance}))),'账户余额');
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(sortedAccounts().map(a=>({账户:a.name,余额:a.balance}))),'账户余额');
     XLSX.writeFile(wb,'钰琦的记账本-'+todayDMY()+'.xlsx');
     toast(`已导出 ${rows.length} 条`);
   };
