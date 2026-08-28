@@ -28,6 +28,8 @@
   --radius:16px; --radius-sm:10px;
   --shadow:0 8px 30px rgba(0,0,0,0.45);
   --sidebar-w:168px;
+  /* 全站 chrome 统一底色：状态栏 / 顶栏 / 侧栏 / 底栏 一律用它，杜绝色差 */
+  --chrome:rgba(16,14,23,.96);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;height:100%;overflow:hidden}
@@ -37,17 +39,25 @@ body{
   color:var(--text); font-size:14px; -webkit-font-smoothing:antialiased;
   display:flex; flex-direction:column; align-items:stretch;
 }
-/* ===== 侧栏常驻左列（手机 = 64px 图标栏，≥760px = 220px 完整带文字）===== */
+/* ===== 侧栏 = 左侧滑出抽屉（覆盖式，不占内容宽度）===== */
 #sidebar{
-  flex:0 0 64px; align-self:stretch;
-  display:flex; flex-direction:column; align-items:center;
-  background:linear-gradient(180deg, rgba(20,18,28,.98), rgba(12,11,18,.98));
+  position:fixed; left:0; top:0; bottom:0;
+  width:min(260px,78%); z-index:70;
+  transform:translateX(-100%); transition:transform .22s ease;
+  background:var(--chrome); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
   border-right:1px solid var(--border);
-  padding:10px 0; gap:4px; overflow:hidden; z-index:60;
+  box-shadow:6px 0 26px rgba(0,0,0,.5);
+  display:flex; flex-direction:column; align-items:stretch;
+  padding:14px 8px; gap:6px; overflow-y:auto;
 }
-@media (min-width:760px){
-  #sidebar{flex:0 0 220px; align-items:stretch; padding:14px 8px; gap:6px; overflow-y:auto}
+#sidebar.open{transform:translateX(0)}
+/* 抽屉遮罩：点击空白处收起 */
+#drawerMask{
+  position:fixed; inset:0; z-index:65;
+  background:rgba(0,0,0,.5); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px);
+  opacity:0; pointer-events:none; transition:opacity .22s;
 }
+#drawerMask.show{opacity:1; pointer-events:auto}
 .hidden{display:none !important}
 .muted{color:var(--muted)} .tiny{font-size:11px}
 .glass{background:var(--surface); backdrop-filter:blur(14px) saturate(120%); -webkit-backdrop-filter:blur(14px) saturate(120%); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow);}
@@ -57,7 +67,7 @@ body{
   position:relative; z-index:30; flex:0 0 auto;
   display:flex; align-items:center; justify-content:space-between; gap:10px;
   padding:8px 14px; font-size:12.5px;
-  background:rgba(10,9,15,0.78); backdrop-filter:blur(10px);
+  background:var(--chrome); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
   border-bottom:1px solid var(--border);
   font-variant-numeric:tabular-nums;
 }
@@ -67,39 +77,28 @@ body{
 #statusBar .time{color:#fff; font-weight:700; letter-spacing:.5px; min-width:64px; text-align:center}
 #statusBar .lunar{color:#ffd28a}
 
-/* ===== 布局（body 整列 = 侧栏常驻 + 右侧主区 100vw 全屏铺满）===== */
-#app{flex:1; min-width:0; min-height:0; display:flex; flex-direction:row; background:var(--bg)}
-#sidebar .brand{display:flex; align-items:center; gap:8px; padding:6px 4px 12px; width:100%; justify-content:center}
-#sidebar .brand-logo{font-size:22px; filter:drop-shadow(0 0 8px rgba(124,58,237,.6))}
-#sidebar .brand-text{font-weight:700; line-height:1.1; font-size:12px; letter-spacing:.5px; display:none}
-@media (min-width:760px){
-  #sidebar .brand-text{display:inline}
-  #sidebar .brand-logo{font-size:24px}
-}
-#sidebar .nav-list{list-style:none; margin:0; padding:0; flex:1; width:100%; display:flex; flex-direction:column; gap:3px; overflow-y:auto}
+/* ===== 布局：主区独占 100vw，侧栏以抽屉浮在上层 ===== */
+#app{flex:1; min-width:0; min-height:0; display:flex; flex-direction:column; background:var(--bg)}
+#sidebar .brand{display:flex; align-items:center; gap:8px; padding:6px 4px 12px; width:100%; justify-content:flex-start}
+#sidebar .brand-logo{font-size:24px; filter:drop-shadow(0 0 8px rgba(124,58,237,.6))}
+#sidebar .brand-text{font-weight:700; line-height:1.1; font-size:13px; letter-spacing:.5px}
+#sidebar .nav-list{list-style:none; margin:0; padding:0; flex:1; width:100%; display:flex; flex-direction:column; gap:4px; overflow-y:auto}
 #sidebar .nav-item{
-  width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
-  padding:8px 2px; border-radius:var(--radius-sm); border:1px solid transparent;
-  background:transparent; color:var(--gray); cursor:pointer; font-size:10px; text-align:center; transition:.18s;
+  width:100%; display:flex; flex-direction:row; align-items:center; justify-content:flex-start; gap:10px;
+  padding:11px 12px; border-radius:var(--radius-sm); border:1px solid transparent;
+  background:transparent; color:var(--gray); cursor:pointer; font-size:13.5px; text-align:left; transition:.18s;
   flex:0 0 auto;
 }
-#sidebar .nav-item .ic{font-size:18px; line-height:1}
+#sidebar .nav-item .ic{font-size:17px; width:20px; text-align:center; line-height:1}
 #sidebar .nav-item:hover{background:var(--primary-soft); color:var(--text)}
-#sidebar .nav-item.active{background:linear-gradient(135deg, rgba(124,58,237,.36), rgba(124,58,237,.10)); border-color:var(--border-strong); color:#fff; box-shadow:0 0 0 1px rgba(124,58,237,.25) inset}
-@media (min-width:760px){
-  #sidebar .nav-item{flex-direction:row; align-items:center; justify-content:flex-start; gap:10px; padding:11px 12px; font-size:13.5px; text-align:left}
-  #sidebar .nav-item .ic{font-size:17px; width:20px; text-align:center}
-}
-#sidebar .nav-foot{width:100%; display:flex; flex-direction:column; align-items:center; padding-top:8px; border-top:1px solid var(--border); gap:4px; flex:0 0 auto}
-#sidebar .nav-foot .nav-item{padding:8px 0; font-size:9.5px}
-@media (min-width:760px){
-  #sidebar .nav-foot{flex-direction:row; justify-content:flex-start; padding:14px 8px 4px}
-  #sidebar .nav-foot .nav-item{width:auto; padding:9px 10px; font-size:12.5px; flex-direction:row; gap:6px}
-}
+#sidebar .nav-item.active{background:linear-gradient(90deg, rgba(124,58,237,.32), rgba(124,58,237,.08)); border-color:var(--border-strong); color:#fff; box-shadow:0 0 0 1px rgba(124,58,237,.25) inset}
+#sidebar .nav-foot{width:100%; display:flex; flex-direction:row; justify-content:flex-start; padding-top:8px; border-top:1px solid var(--border); gap:6px; flex:0 0 auto}
+#sidebar .nav-foot .nav-item{width:auto; padding:9px 10px; font-size:12.5px}
 
 #content{flex:1; min-width:0; min-height:0; display:flex; flex-direction:column; min-height:0}
-#topbar{position:relative; flex:0 0 auto; z-index:20; display:flex; align-items:center; gap:12px; padding:12px 14px; background:rgba(10,9,15,0.55); backdrop-filter:blur(10px); border-bottom:1px solid var(--border)}
+#topbar{position:relative; flex:0 0 auto; z-index:20; display:flex; align-items:center; gap:12px; padding:12px 14px; background:var(--chrome); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border-bottom:1px solid var(--border)}
 #pageTitle{margin:0; font-size:17px; font-weight:700; flex:1; min-width:0}
+#menuToggle{display:block; flex:0 0 auto; width:38px; height:38px; padding:0; font-size:17px; line-height:1; display:flex; align-items:center; justify-content:center}
 .top-actions{display:flex; gap:8px; align-items:center; flex:0 0 auto}
 
 .view{padding:14px; max-width:1100px; width:100%; margin:0 auto}
@@ -179,8 +178,8 @@ input[type="date"]:focus{outline:none; border-color:var(--primary)}
 
 /* ===== 记账明细：筛选/导出栏常驻顶部（不被列表滚走） ===== */
 .r-filterbar{position:sticky; top:84px; z-index:15; margin-bottom:14px;
-  background:linear-gradient(180deg, rgba(20,18,28,.97), rgba(16,14,22,.97));
-  backdrop-filter:blur(8px); border:1px solid var(--border); box-shadow:0 6px 18px rgba(0,0,0,.35)}
+  background:var(--chrome); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  border:1px solid var(--border); box-shadow:0 6px 18px rgba(0,0,0,.35)}
 
 /* ===== 弹窗（fixed 视口全屏，不再被舞台约束）===== */
 .modal-root{position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center}
@@ -237,10 +236,10 @@ input[type="date"]:focus{outline:none; border-color:var(--primary)}
 .bar > i{display:block; height:100%; background:linear-gradient(90deg,var(--primary),#a06bff)}
 .bar > i.over{background:linear-gradient(90deg,#ff5c5c,#ff8a8a)}
 
-/* ===== 底部导航（侧栏外右侧主区底部，6 项） ===== */
+/* ===== 底部导航（6 项，颜色与顶栏/状态栏/侧栏统一） ===== */
 #bottomNav{
   display:flex; flex:0 0 auto; z-index:50;
-  background:rgba(10,9,15,.92); backdrop-filter:blur(12px);
+  background:var(--chrome); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
   border-top:1px solid var(--border);
   justify-content:space-around; padding:6px 2px;
 }
@@ -334,21 +333,9 @@ input[type="date"]:focus{outline:none; border-color:var(--primary)}
 </div>
 
 <div id="app">
-  <!-- 左侧常驻竖向功能导航栏（手机 = 64px 图标栏，宽屏 = 220px 完整带文字） -->
-  <nav id="sidebar">
-    <div class="brand">
-      <span class="brand-logo">💎</span>
-      <span class="brand-text">钰琦的记账本</span>
-    </div>
-    <ul class="nav-list" id="navList"></ul>
-    <div class="nav-foot">
-      <button class="nav-item" id="installBtn" hidden title="安装到桌面/手机">📲<span>安装</span></button>
-      <button class="nav-item" id="lockBtn" title="锁定">🔒<span>锁定</span></button>
-    </div>
-  </nav>
-
   <main id="content">
     <header id="topbar">
+      <button id="menuToggle" class="ghost-btn" aria-label="菜单">☰</button>
       <h1 id="pageTitle">概览</h1>
       <div class="top-actions">
         <button id="saveAllBtn" class="primary-btn">💾 保存</button>
@@ -359,6 +346,22 @@ input[type="date"]:focus{outline:none; border-color:var(--primary)}
     <nav id="bottomNav"></nav>
   </main>
 </div>
+
+<!-- 抽屉遮罩：点击空白处收起侧栏 -->
+<div id="drawerMask"></div>
+
+<!-- 左侧滑出抽屉式功能导航（覆盖式，不占内容宽度） -->
+<nav id="sidebar">
+  <div class="brand">
+    <span class="brand-logo">💎</span>
+    <span class="brand-text">钰琦的记账本</span>
+  </div>
+  <ul class="nav-list" id="navList"></ul>
+  <div class="nav-foot">
+    <button class="nav-item" id="installBtn" hidden title="安装到桌面/手机">📲<span>安装</span></button>
+    <button class="nav-item" id="lockBtn" title="锁定">🔒<span>锁定</span></button>
+  </div>
+</nav>
 
 <!-- 通用弹窗（fixed 视口全屏） -->
 <div id="modalRoot" class="modal-root hidden">
@@ -649,8 +652,16 @@ function buildNav(){
   $$('.nav-item[data-k]').forEach(b=>b.onclick=()=>go(b.dataset.k));
   $('#lockBtn').onclick=()=>{sessionStorage.setItem('fw_locked','1');location.reload();};
   $('#saveAllBtn').onclick=()=>{toast('数据已自动保存到本地 IndexedDB（关闭不丢）');};
+  // 抽屉：汉堡开合、点遮罩收起、Esc 收起
+  $('#menuToggle').onclick=()=>toggleDrawer();
+  $('#drawerMask').onclick=()=>closeDrawer();
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrawer();});
 }
-function go(k){current=k;$('#pageTitle').textContent=(NAV.find(n=>n.k===k)||{}).t||'';$$('.nav-item[data-k]').forEach(b=>b.classList.toggle('active',b.dataset.k===k));(VIEWS[k]||V_overview)($('#view'));}
+/* ---------- 抽屉开合 ---------- */
+function openDrawer(){$('#sidebar').classList.add('open');$('#drawerMask').classList.add('show');}
+function closeDrawer(){$('#sidebar').classList.remove('open');$('#drawerMask').classList.remove('show');}
+function toggleDrawer(){$('#sidebar').classList.contains('open')?closeDrawer():openDrawer();}
+function go(k){current=k;$('#pageTitle').textContent=(NAV.find(n=>n.k===k)||{}).t||'';$$('.nav-item[data-k]').forEach(b=>b.classList.toggle('active',b.dataset.k===k));closeDrawer();(VIEWS[k]||V_overview)($('#view'));}
 
 /* ---------- 视图：概览（独立面板，含醒目提醒）---------- */
 function V_overview(v){
