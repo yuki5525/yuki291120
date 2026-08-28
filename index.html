@@ -28,9 +28,11 @@
   --radius:16px; --radius-sm:10px;
   --shadow:0 8px 30px rgba(0,0,0,0.45);
   --sidebar-w:168px;
-  /* 全站 chrome 统一底色：状态栏 / 顶栏 / 侧栏 / 底栏 一律用它，杜绝色差。
-     改回黑底渐变（顶亮底暗，更立体），变量集中管理。 */
-  --chrome:linear-gradient(180deg, rgba(22,20,30,.97) 0%, rgba(10,9,15,.97) 100%);
+  /* 全站 chrome 统一底色：状态栏 / 顶栏 / 侧栏 / 底栏 一律用它。
+     黑底紫调渐变（顶亮带紫、底暗近黑），加大对比度，肉眼能看出渐变。
+     叠加一道顶部紫色微光让栏条更立体。 */
+  --chrome:linear-gradient(180deg, rgba(34,28,48,.97) 0%, rgba(8,6,14,.97) 100%);
+  --chrome-glow:radial-gradient(ellipse 70% 100% at 50% 0%, rgba(124,58,237,.14), transparent 70%);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;height:100%;overflow:hidden}
@@ -47,7 +49,7 @@ body{
   transform:translateX(-100%); transition:transform .22s ease;
   background:var(--chrome); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
   border-right:1px solid var(--border);
-  box-shadow:6px 0 26px rgba(0,0,0,.5);
+  box-shadow:6px 0 26px rgba(0,0,0,.5), inset -1px 0 0 rgba(255,255,255,.04);
   display:flex; flex-direction:column; align-items:stretch;
   padding:14px 8px; gap:6px; overflow-y:auto;
 }
@@ -68,8 +70,11 @@ body{
   position:relative; z-index:30; flex:0 0 auto;
   display:flex; align-items:center; justify-content:space-between; gap:10px;
   padding:8px 14px; font-size:12.5px;
-  background:var(--chrome); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
-  border-bottom:1px solid var(--border);
+  background-image:var(--chrome-glow), var(--chrome);
+  background-color:transparent;
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  border-bottom:1px solid rgba(124,58,237,.28);
+  box-shadow:0 6px 18px rgba(0,0,0,.35), inset 0 -1px 0 rgba(255,255,255,.05);
   font-variant-numeric:tabular-nums;
 }
 #statusBar .left{display:flex; align-items:center; gap:14px; flex-wrap:wrap}
@@ -97,7 +102,7 @@ body{
 #sidebar .nav-foot .nav-item{width:auto; padding:9px 10px; font-size:12.5px}
 
 #content{flex:1; min-width:0; min-height:0; display:flex; flex-direction:column; min-height:0}
-#topbar{position:relative; flex:0 0 auto; z-index:20; display:flex; align-items:center; gap:12px; padding:12px 14px; background:var(--chrome); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border-bottom:1px solid rgba(124,58,237,.22); box-shadow:0 6px 18px rgba(0,0,0,.35), inset 0 -1px 0 rgba(255,255,255,.04)}
+#topbar{position:relative; flex:0 0 auto; z-index:20; display:flex; align-items:center; gap:12px; padding:12px 14px; background-image:var(--chrome-glow), var(--chrome); background-color:transparent; backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border-bottom:1px solid rgba(124,58,237,.28); box-shadow:0 6px 18px rgba(0,0,0,.35), inset 0 -1px 0 rgba(255,255,255,.05)}
 #pageTitle{margin:0; font-size:17px; font-weight:700; flex:1; min-width:0}
 #menuToggle{display:block; flex:0 0 auto; width:38px; height:38px; padding:0; font-size:17px; line-height:1; display:flex; align-items:center; justify-content:center}
 .top-actions{display:flex; gap:8px; align-items:center; flex:0 0 auto}
@@ -237,17 +242,24 @@ input[type="date"]:focus{outline:none; border-color:var(--primary)}
 .bar > i{display:block; height:100%; background:linear-gradient(90deg,var(--primary),#a06bff)}
 .bar > i.over{background:linear-gradient(90deg,#ff5c5c,#ff8a8a)}
 
-/* ===== 底部导航（6 项，颜色与顶栏/状态栏/侧栏统一，加顶阴影与高光更立体） ===== */
+/* ===== 底部导航（黑底紫调渐变 + 顶部紫光 + 上下立体阴影） ===== */
 #bottomNav{
   display:flex; flex:0 0 auto; z-index:50;
-  background:var(--chrome); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
-  border-top:1px solid rgba(124,58,237,.22);
-  box-shadow:0 -6px 18px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.04);
+  background-image:var(--chrome-glow), var(--chrome);
+  background-color:transparent;
+  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  border-top:1px solid rgba(124,58,237,.28);
+  box-shadow:0 -8px 22px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.05);
   justify-content:space-around; padding:6px 2px;
 }
 #bottomNav .nav-item{flex-direction:column; gap:2px; font-size:10px; padding:6px 4px; flex:1; justify-content:center; align-items:center}
 #bottomNav .ic{font-size:18px}
 .toast{position:fixed; left:50%; bottom:84px; transform:translateX(-50%); z-index:300; background:rgba(20,18,28,.96); border:1px solid var(--border-strong); color:#fff; padding:11px 18px; border-radius:999px; font-size:13px; box-shadow:var(--shadow); animation:pop .25s}
+/* ===== 新版本提示条：SW 检测到新版时显示 ===== */
+#updateBanner{position:fixed; top:0; left:0; right:0; z-index:400; padding:10px 14px; display:flex; gap:10px; align-items:center; justify-content:center; background:linear-gradient(90deg, var(--primary), #5b2bb0); color:#fff; font-size:13px; box-shadow:0 4px 18px rgba(0,0,0,.45); animation:slideDown .3s}
+#updateBanner button{background:rgba(255,255,255,.22); border:1px solid rgba(255,255,255,.45); color:#fff; padding:7px 14px; border-radius:8px; cursor:pointer; font-size:12.5px; font-weight:600}
+#updateBanner button:hover{background:rgba(255,255,255,.32)}
+@keyframes slideDown{from{transform:translateY(-100%);opacity:0} to{transform:translateY(0);opacity:1}}
 @keyframes pop{from{opacity:0; transform:translate(-50%,10px)} to{opacity:1; transform:translate(-50%,0)}}
 .pill-row{display:flex; gap:8px; flex-wrap:wrap}
 .seg{display:inline-flex; border:1px solid var(--border); border-radius:999px; overflow:hidden}
@@ -384,6 +396,12 @@ input[type="date"]:focus{outline:none; border-color:var(--primary)}
     <button id="bioBtn" class="primary-btn block" style="display:none;margin-top:10px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);box-shadow:0 4px 14px rgba(59,130,246,.35)">👆 指纹快捷解锁</button>
     <p class="tiny muted">首次使用请到「设置」中设置密码；默认密码 0000</p>
   </div>
+</div>
+
+<!-- 新版本提示：SW 检测到新版时由 JS 解除 hidden -->
+<div id="updateBanner" hidden>
+  🆕 新版本已就绪，体验改进已上线
+  <button id="updateBtn">立即刷新</button>
 </div>
 
 <!-- 第三方依赖（Service Worker 离线缓存） -->
@@ -1952,13 +1970,32 @@ async function tryUnlock(){
   }
 }
 
-/* ---------- PWA 注册 & 安装提示 ---------- */
+/* ---------- PWA 注册 & 安装提示 & 新版本提示 ---------- */
 if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').then(reg=>{
+      // 检测到 waiting worker（新版 SW 已下载但未激活）→ 弹更新条
+      const show=()=>{ const b=document.getElementById('updateBanner'); if(b) b.hidden=false; };
+      if(reg.waiting && reg.waiting.state==='installed') show();
+      reg.addEventListener('updatefound',()=>{
+        const nw=reg.installing;
+        nw && nw.addEventListener('statechange',()=>{
+          if(nw.state==='installed' && navigator.serviceWorker.controller) show();
+        });
+      });
+      // 切页时再查一次（首次安装 controller 为 null，要等二次进入）
+      navigator.serviceWorker.addEventListener('controllerchange',()=>location.reload());
+    }).catch(()=>{});
+  });
+  // 提供给 banner 按钮调用：让 waiting SW 立即激活
+  navigator.serviceWorker.addEventListener('message',e=>{ /* no-op */ });
+  window.__skipWaiting=()=>{ navigator.serviceWorker.getRegistration().then(r=>{ if(r && r.waiting) r.waiting.postMessage({type:'SKIP_WAITING'}); }); };
 }
 let _deferred=null;
 window.addEventListener('beforeinstallprompt',(e)=>{ e.preventDefault(); _deferred=e; const b=document.getElementById('installBtn'); if(b) b.hidden=false; });
 document.addEventListener('click',(e)=>{ if(e.target && e.target.id==='installBtn' && _deferred){ _deferred.prompt(); _deferred=null; e.target.hidden=true; } });
+// 更新条按钮：触发 skipWaiting → 页面自动 reload
+document.addEventListener('click',(e)=>{ if(e.target && e.target.id==='updateBtn'){ window.__skipWaiting && window.__skipWaiting(); } });
 
 boot();
 </script>

@@ -1,7 +1,7 @@
 /* Service Worker — 家庭记账 PWA
  * 缓存策略：app shell 与 CDN 依赖全部预缓存；同源 / CDN 命中缓存优先，回退网络。
  */
-const CACHE = 'fw-pwa-v23';
+const CACHE = 'fw-pwa-v24';
 const SHELL = [
   './',
   './index.html',
@@ -36,6 +36,9 @@ self.addEventListener('activate', (e) => {
       .then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
+});
+self.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('fetch', (e) => {
