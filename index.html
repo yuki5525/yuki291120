@@ -666,6 +666,7 @@ function V_overview(v){
     ${S.accounts.map(a=>{
       if(isCreditAcc(a)){
         const c=creditInfo(a.name);
+        if(c.unset && c.owed<=0) return ''; // 额度未设且无使用记录 → 概览不展示
         if(c.unset){
           return `<div class="card glass"><div class="label">${esc(a.name)} <span class="badge">信用</span></div><div class="value">额度未设</div><div class="sub">已用 ${fmtRM(c.owed)} · 去「账户期初」填额度</div></div>`;
         }
