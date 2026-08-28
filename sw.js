@@ -3,7 +3,7 @@
  *   HTML 导航 → 网络优先（每次都拉最新版，根治"改了看不到"）；断网回落缓存
  *   静态资源 / CDN → 缓存优先（离线可用、加载快）
  */
-const CACHE = 'fw-pwa-v25';
+const CACHE = 'fw-pwa-v26';
 const SHELL = [
   './',
   './index.html',
